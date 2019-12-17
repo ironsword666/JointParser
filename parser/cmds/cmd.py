@@ -74,7 +74,10 @@ class CMD(object):
         for words, feats, labels in loader:
             self.optimizer.zero_grad()
 
-            mask = labels.ne(self.args.pad_index)
+            batch_size, seq_len = words.shape
+            mask = words[:, :-1].ne(self.args.pad_index).unsqueeze(1)
+            mask &= words[:, :-1].ne(self.args.eos_index).unsqueeze(1)
+            mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             scores = self.model(words, feats)
             loss = self.get_loss(scores, labels, mask)
             loss.backward()
@@ -97,7 +100,10 @@ class CMD(object):
         total_loss, metric = 0, F1Method(self.args.nul_index)
 
         for words, feats, labels in loader:
-            mask = labels.ne(self.args.pad_index)
+            batch_size, seq_len = words.shape
+            mask = words[:, :-1].ne(self.args.pad_index).unsqueeze(1)
+            mask &= words[:, :-1].ne(self.args.eos_index).unsqueeze(1)
+            mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             scores = self.model(words, feats)
             loss = self.get_loss(scores, labels, mask)
             preds = self.decode(scores, mask)

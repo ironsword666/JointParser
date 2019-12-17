@@ -64,8 +64,9 @@ class F1Method(Metric):
         self.eps = eps
 
     def __call__(self, preds, golds, mask):
-        pred_mask = preds.ne(self.ignore_index) & mask
-        gold_mask = golds.ne(self.ignore_index) & mask
+        preds, golds = preds[mask], golds[mask]
+        pred_mask = preds.ne(self.ignore_index)
+        gold_mask = golds.ne(self.ignore_index)
         self.tp += (preds.eq(golds) & pred_mask).sum().item()
         self.pred += pred_mask.sum().item()
         self.gold += gold_mask.sum().item()

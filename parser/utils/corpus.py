@@ -2,7 +2,6 @@
 
 from collections import namedtuple
 from collections.abc import Iterable
-from itertools import chain
 from parser.utils.tree import load_trees
 
 Treebank = namedtuple(typename='Treebank',
