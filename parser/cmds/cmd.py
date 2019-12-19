@@ -55,7 +55,6 @@ class CMD(object):
             self.TREE = self.fields.TREE
         self.criterion = nn.CrossEntropyLoss()
 
-        print(f"{self.WORD}\n{self.FEAT}\n{self.TREE}")
         args.update({
             'n_words': self.WORD.vocab.n_init,
             'n_feats': len(self.FEAT.vocab),
@@ -67,6 +66,9 @@ class CMD(object):
             'nul_index': self.TREE.vocab[()]
         })
 
+        print(f"Override the default configs\n{args}")
+        print(f"{self.WORD}\n{self.FEAT}\n{self.TREE}")
+
     def train(self, loader):
         self.model.train()
 
@@ -77,8 +79,8 @@ class CMD(object):
             self.optimizer.zero_grad()
 
             batch_size, seq_len = words.shape
-            mask = words[:, :-1].ne(self.args.pad_index).unsqueeze(1)
-            mask &= words[:, :-1].ne(self.args.eos_index).unsqueeze(1)
+            lens = words.ne(self.args.pad_index).sum(1) - 1
+            mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             scores = self.model(words, feats)
             loss = self.get_loss(scores, labels, mask)
@@ -88,9 +90,10 @@ class CMD(object):
             self.optimizer.step()
             self.scheduler.step()
 
+            preds = cky(scores, mask, self.args.nul_index)
             preds = [tree.convert().build([(i, j, self.TREE.vocab.itos[label])
-                                           for i, j, label in sequence]).convert()
-                     for tree, sequence in zip(trees, cky(scores, mask))]
+                                           for i, j, label in pred]).convert()
+                     for tree, pred in zip(trees, preds)]
             total_loss += loss.item()
             metric(preds, trees, mask)
         total_loss /= len(loader)
@@ -106,14 +109,15 @@ class CMD(object):
 
         for words, feats, (trees, labels) in loader:
             batch_size, seq_len = words.shape
-            mask = words[:, :-1].ne(self.args.pad_index).unsqueeze(1)
-            mask &= words[:, :-1].ne(self.args.eos_index).unsqueeze(1)
+            lens = words.ne(self.args.pad_index).sum(1) - 1
+            mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             scores = self.model(words, feats)
             loss = self.get_loss(scores, labels, mask)
+            preds = cky(scores, mask, self.args.nul_index)
             preds = [tree.convert().build([(i, j, self.TREE.vocab.itos[label])
-                                           for i, j, label in sequence]).convert()
-                     for tree, sequence in zip(trees, cky(scores, mask))]
+                                           for i, j, label in pred]).convert()
+                     for tree, pred in zip(trees, preds)]
             total_loss += loss.item()
             metric(preds, trees, mask)
         total_loss /= len(loader)
@@ -127,14 +131,15 @@ class CMD(object):
         all_trees = []
         for words, feats, trees in loader:
             batch_size, seq_len = words.shape
-            mask = words[:, :-1].ne(self.args.pad_index).unsqueeze(1)
-            mask &= words[:, :-1].ne(self.args.eos_index).unsqueeze(1)
+            lens = words.ne(self.args.pad_index).sum(1) - 1
+            mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
-            lens = mask.sum(1).tolist()
             scores = self.model(words, feats)
-            preds = cky(scores, mask)
-            all_trees.extend(preds[mask].split(lens))
-        all_trees = [seq.tolist() for seq in all_trees]
+            preds = cky(scores, mask, self.args.nul_index)
+            preds = [tree.convert().build([(i, j, self.TREE.vocab.itos[label])
+                                           for i, j, label in pred]).convert()
+                     for tree, pred in zip(trees, preds)]
+            all_trees.extend(preds)
 
         return all_trees
 

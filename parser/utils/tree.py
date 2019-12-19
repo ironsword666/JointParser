@@ -56,7 +56,7 @@ class LeafTreebankNode(TreebankNode):
         self.word = word
 
     def __repr__(self):
-        return f"({self.word} {self.tag})"
+        return f"({self.tag} {self.word})"
 
     def leaves(self):
         yield self
@@ -139,6 +139,7 @@ class InternalParseNode(ParseNode):
                     return [InternalParseNode(label, children)]
                 else:
                     return children
+
         return track(iter(tree))[0]
 
 

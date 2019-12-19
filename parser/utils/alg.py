@@ -48,9 +48,9 @@ def kmeans(x, k):
 
 def cky(scores, mask, ignore_index=0):
     lens = mask[:, 0].sum(-1)
-    scores[:, 0, lens, ignore_index] = float('-inf')
-    batch_size, seq_len, seq_len, n_labels = scores.shape
     scores = scores.permute(1, 2, 3, 0)
+    seq_len, seq_len, n_labels, batch_size = scores.shape
+    scores[0, lens, ignore_index, range(batch_size)] = float('-inf')
     s = scores.new_zeros(seq_len, seq_len, batch_size)
     p_s = scores.new_zeros(seq_len, seq_len, batch_size).long()
     p_l = scores.new_zeros(seq_len, seq_len, batch_size).long()
@@ -75,10 +75,9 @@ def cky(scores, mask, ignore_index=0):
         p_s.diagonal(w).copy_(p_split + starts + 1)
 
     def backtrack(p_s, p_l, i, j):
-        w, label = j - i, p_l[i][j]
-        if w == 1:
-            return [(i, j, label)]
-        split = p_s[i][j]
+        if j == i + 1:
+            return [(i, j, p_l[i][j])]
+        split, label = p_s[i][j], p_l[i][j]
         ltree = backtrack(p_s, p_l, i, split)
         rtree = backtrack(p_s, p_l, split, j)
         return [(i, j, label)] + ltree + rtree

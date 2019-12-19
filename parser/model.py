@@ -66,9 +66,11 @@ class Model(nn.Module):
         # get the mask and lengths of given batch
         mask = words.ne(self.pad_index)
         lens = mask.sum(dim=1)
+        ext_words = words
         # set the indices larger than num_embeddings to unk_index
-        ext_mask = words.ge(self.word_embed.num_embeddings)
-        ext_words = words.masked_fill(ext_mask, self.unk_index)
+        if hasattr(self, 'pretrained'):
+            ext_mask = words.ge(self.word_embed.num_embeddings)
+            ext_words = words.masked_fill(ext_mask, self.unk_index)
 
         # get outputs from embedding layers
         word_embed = self.word_embed(ext_words)
@@ -95,6 +97,7 @@ class Model(nn.Module):
 
         # [batch_size, seq_len, seq_len, n_labels]
         s = self.attn(x_f, x_b).permute(0, 2, 3, 1)
+        s[..., 0] = 0
 
         return s
 

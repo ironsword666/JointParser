@@ -2,6 +2,7 @@
 
 from collections import namedtuple
 from collections.abc import Iterable
+from parser.utils.field import Field
 from parser.utils.tree import load_trees
 
 Treebank = namedtuple(typename='Treebank',
@@ -30,7 +31,7 @@ class Sentence(object):
         return len(list(self.tree.leaves()))
 
     def __repr__(self):
-        return self.tree.convert()
+        return f"{self.tree.convert()}"
 
 
 class Corpus(object):
@@ -66,6 +67,8 @@ class Corpus(object):
     @classmethod
     def load(cls, path, fields):
         trees = load_trees(path)
+        fields = [field if field is not None else Field(str(i))
+                  for i, field in enumerate(fields)]
         sentences = [Sentence(tree, fields) for tree in trees]
 
         return cls(fields, sentences)

@@ -134,13 +134,13 @@ class CharField(Field):
             self.fix_len = max(len(token) for sequence in sequences
                                for token in sequence)
         if self.use_vocab:
-            sequences = [[self.vocab[token] for token in sequence]
+            sequences = [[self.vocab.token2id(token) for token in sequence]
                          for sequence in sequences]
         if self.bos:
-            sequences = [[self.vocab[self.bos]] + sequence
+            sequences = [[self.vocab.token2id(self.bos)] + sequence
                          for sequence in sequences]
         if self.eos:
-            sequences = [sequence + [self.vocab[self.eos]]
+            sequences = [sequence + [self.vocab.token2id(self.eos)]
                          for sequence in sequences]
         sequences = [
             torch.tensor([ids[:self.fix_len] + [0] * (self.fix_len - len(ids))
