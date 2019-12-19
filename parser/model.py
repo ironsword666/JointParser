@@ -53,6 +53,7 @@ class Model(nn.Module):
                              bias_y=True)
         self.pad_index = args.pad_index
         self.unk_index = args.unk_index
+        self.nul_index = args.nul_index
 
     def load_pretrained(self, embed=None):
         if embed is not None:
@@ -97,7 +98,7 @@ class Model(nn.Module):
 
         # [batch_size, seq_len, seq_len, n_labels]
         s = self.attn(x_f, x_b).permute(0, 2, 3, 1)
-        s[..., 0] = 0
+        s[..., self.nul_index] = 0
 
         return s
 
