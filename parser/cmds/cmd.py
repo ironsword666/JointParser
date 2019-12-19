@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import os
+from parser.utils.alg import cky
 from parser.utils.common import bos, eos, pad, unk
 from parser.utils.corpus import Corpus, Treebank
-from parser.utils.field import BertField, CharField, Field, LabelField
-from parser.utils.metric import F1Method
+from parser.utils.field import BertField, CharField, Field, TreeField
+from parser.utils.metric import EVALBMetric
 
 import torch
 import torch.nn as nn
@@ -32,18 +33,18 @@ class CMD(object):
                                       tokenize=tokenizer.encode)
             else:
                 self.FEAT = Field('tags', bos=bos, eos=eos)
-            self.LABEL = LabelField('labels')
+            self.TREE = TreeField('trees', unk=())
             if args.feat in ('char', 'bert'):
                 self.fields = Treebank(WORD=(self.WORD, self.FEAT),
-                                       LABEL=self.LABEL)
+                                       TREE=self.TREE)
             else:
                 self.fields = Treebank(WORD=self.WORD, POS=self.FEAT,
-                                       LABEL=self.LABEL)
+                                       TREE=self.TREE)
 
             train = Corpus.load(args.ftrain, self.fields)
             self.WORD.build(train, args.min_freq)
             self.FEAT.build(train)
-            self.LABEL.build(train)
+            self.TREE.build(train)
             torch.save(self.fields, args.fields)
         else:
             self.fields = torch.load(args.fields)
@@ -51,27 +52,28 @@ class CMD(object):
                 self.WORD, self.FEAT = self.fields.WORD
             else:
                 self.WORD, self.FEAT = self.fields.WORD, self.fields.POS
-            self.LABEL = self.fields.LABEL
+            self.TREE = self.fields.TREE
         self.criterion = nn.CrossEntropyLoss()
 
-        print(f"{self.WORD}\n{self.FEAT}\n{self.LABEL}")
+        print(f"{self.WORD}\n{self.FEAT}\n{self.TREE}")
         args.update({
             'n_words': self.WORD.vocab.n_init,
             'n_feats': len(self.FEAT.vocab),
-            'n_labels': len(self.LABEL.vocab),
+            'n_labels': len(self.TREE.vocab),
             'pad_index': self.WORD.pad_index,
             'unk_index': self.WORD.unk_index,
             'bos_index': self.WORD.bos_index,
             'eos_index': self.WORD.eos_index,
-            'nul_index': self.LABEL.vocab[()]
+            'nul_index': self.TREE.vocab[()]
         })
 
     def train(self, loader):
         self.model.train()
 
-        total_loss, metric = 0, F1Method(self.args.nul_index)
+        total_loss = 0
+        metric = EVALBMetric(self.args.evalb, self.args.evalb_param)
 
-        for words, feats, labels in loader:
+        for words, feats, (trees, labels) in loader:
             self.optimizer.zero_grad()
 
             batch_size, seq_len = words.shape
@@ -86,9 +88,11 @@ class CMD(object):
             self.optimizer.step()
             self.scheduler.step()
 
-            preds = self.decode(scores, mask)
+            preds = [tree.convert().build([(i, j, self.TREE.vocab.itos[label])
+                                           for i, j, label in sequence]).convert()
+                     for tree, sequence in zip(trees, cky(scores, mask))]
             total_loss += loss.item()
-            metric(preds, labels, mask)
+            metric(preds, trees, mask)
         total_loss /= len(loader)
 
         return total_loss, metric
@@ -97,18 +101,21 @@ class CMD(object):
     def evaluate(self, loader):
         self.model.eval()
 
-        total_loss, metric = 0, F1Method(self.args.nul_index)
+        total_loss = 0
+        metric = EVALBMetric(self.args.evalb, self.args.evalb_param)
 
-        for words, feats, labels in loader:
+        for words, feats, (trees, labels) in loader:
             batch_size, seq_len = words.shape
             mask = words[:, :-1].ne(self.args.pad_index).unsqueeze(1)
             mask &= words[:, :-1].ne(self.args.eos_index).unsqueeze(1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             scores = self.model(words, feats)
             loss = self.get_loss(scores, labels, mask)
-            preds = self.decode(scores, mask)
+            preds = [tree.convert().build([(i, j, self.TREE.vocab.itos[label])
+                                           for i, j, label in sequence]).convert()
+                     for tree, sequence in zip(trees, cky(scores, mask))]
             total_loss += loss.item()
-            metric(preds, labels, mask)
+            metric(preds, trees, mask)
         total_loss /= len(loader)
 
         return total_loss, metric
@@ -117,27 +124,22 @@ class CMD(object):
     def predict(self, loader):
         self.model.eval()
 
-        all_labels, all_probs = [], [], []
-        for words, feats in loader:
-            mask = labels.ne(self.args.pad_index)
+        all_trees = []
+        for words, feats, trees in loader:
+            batch_size, seq_len = words.shape
+            mask = words[:, :-1].ne(self.args.pad_index).unsqueeze(1)
+            mask &= words[:, :-1].ne(self.args.eos_index).unsqueeze(1)
+            mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             lens = mask.sum(1).tolist()
             scores = self.model(words, feats)
-            scores = scores.softmax(-1)
-            preds = self.decode(scores, mask)
-            all_labels.extend(preds[mask].split(lens))
-            if self.args.prob:
-                arc_probs = scores.gather(-1, preds.unsqueeze(-1))
-                all_probs.extend(arc_probs.squeeze(-1)[mask].split(lens))
-        all_labels = [seq.tolist() for seq in all_labels]
-        all_probs = [[round(p, 4) for p in seq.tolist()] for seq in all_probs]
+            preds = cky(scores, mask)
+            all_trees.extend(preds[mask].split(lens))
+        all_trees = [seq.tolist() for seq in all_trees]
 
-        return all_labels, all_probs
+        return all_trees
 
     def get_loss(self, scores, labels, mask):
         scores, labels = scores[mask], labels[mask]
         loss = self.criterion(scores, labels)
 
         return loss
-
-    def decode(self, scores, mask):
-        return scores.argmax(-1)

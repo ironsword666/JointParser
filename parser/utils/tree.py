@@ -19,7 +19,10 @@ class InternalTreebankNode(TreebankNode):
         self.children = tuple(children)
 
     def __repr__(self):
-        return f"({self.label} {' '.join(self.children)})"
+        s = f"({self.label} "
+        s += ' '.join([f"{child}" for child in self.children]) + ')'
+
+        return s
 
     def leaves(self):
         for child in self.children:
@@ -79,9 +82,8 @@ class InternalParseNode(ParseNode):
         assert all(isinstance(child, ParseNode) for child in children)
         assert children
         assert len(children) > 1 or isinstance(children[0], LeafParseNode)
-        assert all(
-            left.right == right.left
-            for left, right in zip(children, children[1:]))
+        assert all(left.right == right.left
+                   for left, right in zip(children, children[1:]))
         self.children = tuple(children)
 
         self.left = children[0].left
@@ -120,6 +122,24 @@ class InternalParseNode(ParseNode):
             for child in self.enclosing(left, right).children
             if left < child.left < right
         ]
+
+    def build(self, tree):
+        leaves = list(self.leaves())
+
+        def track(node):
+            i, j, label = next(node)
+            if j == i+1:
+                tree = leaves[i]
+                if label:
+                    tree = InternalParseNode(label, [tree])
+                return [tree]
+            else:
+                children = track(node) + track(node)
+                if label:
+                    return [InternalParseNode(label, children)]
+                else:
+                    return children
+        return track(iter(tree))[0]
 
 
 class LeafParseNode(ParseNode):

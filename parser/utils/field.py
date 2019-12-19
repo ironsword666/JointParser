@@ -72,7 +72,7 @@ class Field(object):
         sequences = getattr(corpus, self.name)
         counter = Counter(token for sequence in sequences
                           for token in self.transform(sequence))
-        self.vocab = Vocab(counter, min_freq, self.specials)
+        self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
 
         if not embed:
             self.embed = None
@@ -112,7 +112,7 @@ class CharField(Field):
         sequences = getattr(corpus, self.name)
         counter = Counter(char for sequence in sequences for token in sequence
                           for char in self.transform(token))
-        self.vocab = Vocab(counter, min_freq, self.specials)
+        self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
 
         if not embed:
             self.embed = None
@@ -134,13 +134,13 @@ class CharField(Field):
             self.fix_len = max(len(token) for sequence in sequences
                                for token in sequence)
         if self.use_vocab:
-            sequences = [[self.vocab.token2id(token) for token in sequence]
+            sequences = [[self.vocab[token] for token in sequence]
                          for sequence in sequences]
         if self.bos:
-            sequences = [[self.vocab.token2id(self.bos)] + sequence
+            sequences = [[self.vocab[self.bos]] + sequence
                          for sequence in sequences]
         if self.eos:
-            sequences = [sequence + [self.vocab.token2id(self.eos)]
+            sequences = [sequence + [self.vocab[self.eos]]
                          for sequence in sequences]
         sequences = [
             torch.tensor([ids[:self.fix_len] + [0] * (self.fix_len - len(ids))
@@ -149,6 +149,39 @@ class CharField(Field):
         ]
 
         return sequences
+
+
+class TreeField(Field):
+
+    def build(self, corpus, min_freq=1):
+        counter, trees = Counter(), getattr(corpus, self.name)
+        for tree in trees:
+            nodes = [tree]
+            while nodes:
+                node = nodes.pop()
+                if type(node) == type(tree):
+                    counter[node.label] += 1
+                    nodes.extend(reversed(node.children))
+        self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
+
+    def numericalize(self, trees):
+        trees, labels = [self.transform(tree) for tree in trees], []
+        for tree in trees:
+            nodes, spans = [tree], {}
+            seq_len = len(list(tree.leaves())) + 1
+            while nodes:
+                node = nodes.pop()
+                if type(node) == type(tree):
+                    spans[node.left, node.right] = node.label
+                    nodes.extend(reversed(node.children))
+            chart = torch.full((seq_len, seq_len), self.pad_index).long()
+            chart[torch.ones_like(chart).triu_(1).gt(0)] = self.unk_index
+            for (i, j), label in spans.items():
+                chart[i, j] = self.vocab[label]
+            labels.append(chart)
+        trees = [tree.convert() for tree in trees]
+
+        return list(zip(trees, labels)) if labels else trees
 
 
 class BertField(Field):
@@ -169,20 +202,3 @@ class BertField(Field):
         mask = [torch.ones(len(pieces)).gt(0) for pieces in subwords]
 
         return list(zip(subwords, lens, mask))
-
-
-class LabelField(Field):
-
-    def numericalize(self, sequences):
-        sequences = [self.transform(sequence) for sequence in sequences]
-        if self.use_vocab:
-            sequences = [self.vocab.token2id(sequence)
-                         for sequence in sequences]
-        sequences = [torch.tensor(sequence) for sequence in sequences]
-        charts = [sequence.new_zeros(((int((1+8*len(sequence))**0.5)-1)//2+1,)*2)
-                  for sequence in sequences]
-        for chart, sequence in zip(charts, sequences):
-            mask = torch.ones_like(chart).triu_(1).gt(0)
-            chart.fill_(self.pad_index).masked_scatter_(mask, sequence)
-
-        return charts

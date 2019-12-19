@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+
+import os
+import shutil
+import subprocess
+import tempfile
+
+
 class Metric(object):
 
     def __lt__(self, other):
@@ -18,7 +25,7 @@ class Metric(object):
         return 0.
 
 
-class AttachmentMethod(Metric):
+class AttachmentMetric(Metric):
 
     def __init__(self, eps=1e-5):
         super(Metric, self).__init__()
@@ -52,24 +59,47 @@ class AttachmentMethod(Metric):
         return self.correct_rels / (self.total + self.eps)
 
 
-class F1Method(Metric):
+class EVALBMetric(Metric):
 
-    def __init__(self, ignore_index=0, eps=1e-5):
-        super(F1Method, self).__init__()
+    def __init__(self, evalb, evalb_param, eps=1e-5):
+        super(EVALBMetric, self).__init__()
+
+        self.evalb = evalb
+        self.evalb_param = evalb_param
+        self.header_line = ['ID', 'Len.', 'Stat.', 'Recal',
+                            'Prec.', 'Bracket', 'gold', 'test',
+                            'Bracket', 'Words', 'Tags', 'Accracy']
 
         self.tp = 0.0
         self.pred = 0.0
         self.gold = 0.0
-        self.ignore_index = ignore_index
         self.eps = eps
 
     def __call__(self, preds, golds, mask):
-        preds, golds = preds[mask], golds[mask]
-        pred_mask = preds.ne(self.ignore_index)
-        gold_mask = golds.ne(self.ignore_index)
-        self.tp += (preds.eq(golds) & pred_mask).sum().item()
-        self.pred += pred_mask.sum().item()
-        self.gold += gold_mask.sum().item()
+        tempdir = tempfile.mkdtemp()
+        pred_path = os.path.join(tempdir, 'preds.pid')
+        gold_path = os.path.join(tempdir, 'golds.pid')
+        with open(pred_path, 'w') as f:
+            f.writelines([f"{tree}\n" for tree in preds])
+        with open(gold_path, 'w') as f:
+            f.writelines([f"{tree}\n" for tree in golds])
+
+        completed = subprocess.run([self.evalb,
+                                    "-p",
+                                    self.evalb_param,
+                                    gold_path,
+                                    pred_path],
+                                   stdout=subprocess.PIPE,
+                                   universal_newlines=True,
+                                   check=True)
+        for line in completed.stdout.split("\n"):
+            stripped = line.strip().split()
+            if len(stripped) == 12 and stripped != self.header_line:
+                numeric_line = [float(x) for x in stripped]
+                self.tp += numeric_line[5]
+                self.pred += numeric_line[7]
+                self.gold += numeric_line[6]
+        shutil.rmtree(tempdir)
 
     def __repr__(self):
         p, r, f = self.precision, self.recall, self.f_score

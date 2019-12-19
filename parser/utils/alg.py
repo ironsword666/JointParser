@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from parser.utils.fn import stripe
+
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
@@ -44,6 +46,51 @@ def kmeans(x, k):
     return centroids, clusters
 
 
+def cky(scores, mask, ignore_index=0):
+    lens = mask[:, 0].sum(-1)
+    scores[:, 0, lens, ignore_index] = float('-inf')
+    batch_size, seq_len, seq_len, n_labels = scores.shape
+    scores = scores.permute(1, 2, 3, 0)
+    s = scores.new_zeros(seq_len, seq_len, batch_size)
+    p_s = scores.new_zeros(seq_len, seq_len, batch_size).long()
+    p_l = scores.new_zeros(seq_len, seq_len, batch_size).long()
+
+    for w in range(1, seq_len):
+        n = seq_len - w
+        starts = p_s.new_tensor(range(n)).unsqueeze(0)
+        # [batch_size, n]
+        s_label, p_label = scores.diagonal(w).max(0)
+        p_l.diagonal(w).copy_(p_label)
+
+        if w == 1:
+            s.diagonal(w).copy_(s_label)
+            continue
+        # [n, w, batch_size]
+        s_split = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
+        # [batch_size, n, w]
+        s_split = s_split.permute(2, 0, 1)
+        # [batch_size, n]
+        s_split, p_split = s_split.max(-1)
+        s.diagonal(w).copy_(s_split + s_label)
+        p_s.diagonal(w).copy_(p_split + starts + 1)
+
+    def backtrack(p_s, p_l, i, j):
+        w, label = j - i, p_l[i][j]
+        if w == 1:
+            return [(i, j, label)]
+        split = p_s[i][j]
+        ltree = backtrack(p_s, p_l, i, split)
+        rtree = backtrack(p_s, p_l, split, j)
+        return [(i, j, label)] + ltree + rtree
+
+    p_s = p_s.permute(2, 0, 1).tolist()
+    p_l = p_l.permute(2, 0, 1).tolist()
+    trees = [backtrack(p_s[i], p_l[i], 0, length)
+             for i, length in enumerate(lens.tolist())]
+
+    return trees
+
+
 def eisner(scores, mask):
     lens = mask.sum(1)
     batch_size, seq_len, _ = scores.shape
@@ -84,6 +131,19 @@ def eisner(scores, mask):
         s_c[0, w][lens.ne(w)] = float('-inf')
         p_c.diagonal(w).copy_(cr_path + starts + 1)
 
+    def backtrack(p_i, p_c, heads, i, j, complete):
+        if i == j:
+            return
+        if complete:
+            r = p_c[i, j]
+            backtrack(p_i, p_c, heads, i, r, False)
+            backtrack(p_i, p_c, heads, r, j, True)
+        else:
+            r, heads[j] = p_i[i, j], i
+            i, j = sorted((i, j))
+            backtrack(p_i, p_c, heads, i, r, True)
+            backtrack(p_i, p_c, heads, j, r + 1, True)
+
     predicts = []
     p_c = p_c.permute(2, 0, 1).cpu()
     p_i = p_i.permute(2, 0, 1).cpu()
@@ -93,51 +153,3 @@ def eisner(scores, mask):
         predicts.append(heads.to(mask.device))
 
     return pad_sequence(predicts, True)
-
-
-def backtrack(p_i, p_c, heads, i, j, complete):
-    if i == j:
-        return
-    if complete:
-        r = p_c[i, j]
-        backtrack(p_i, p_c, heads, i, r, False)
-        backtrack(p_i, p_c, heads, r, j, True)
-    else:
-        r, heads[j] = p_i[i, j], i
-        i, j = sorted((i, j))
-        backtrack(p_i, p_c, heads, i, r, True)
-        backtrack(p_i, p_c, heads, j, r + 1, True)
-
-
-def stripe(x, n, w, offset=(0, 0), dim=1):
-    r'''Returns a diagonal stripe of the tensor.
-
-    Parameters:
-        x (Tensor): the input tensor with 2 or more dims.
-        n (int): the length of the stripe.
-        w (int): the width of the stripe.
-        offset (tuple): the offset of the first two dims.
-        dim (int): 0 if returns a horizontal stripe; 1 else.
-
-    Example::
-    >>> x = torch.arange(25).view(5, 5)
-    >>> x
-    tensor([[ 0,  1,  2,  3,  4],
-            [ 5,  6,  7,  8,  9],
-            [10, 11, 12, 13, 14],
-            [15, 16, 17, 18, 19],
-            [20, 21, 22, 23, 24]])
-    >>> stripe(x, 2, 3, (1, 1))
-    tensor([[ 6,  7,  8],
-            [12, 13, 14]])
-    >>> stripe(x, 2, 3, dim=0)
-    tensor([[ 0,  5, 10],
-            [ 6, 11, 16]])
-    '''
-    x, seq_len = x.contiguous(), x.size(1)
-    stride, numel = list(x.stride()), x[0, 0].numel()
-    stride[0] = (seq_len + 1) * numel
-    stride[1] = (1 if dim == 1 else seq_len) * numel
-    return x.as_strided(size=(n, w, *x.shape[2:]),
-                        stride=stride,
-                        storage_offset=(offset[0]*seq_len+offset[1])*numel)

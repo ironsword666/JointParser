@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from parser.utils.tree import load_trees
 
 Treebank = namedtuple(typename='Treebank',
-                      field_names=['WORD', 'POS', 'LABEL'],
+                      field_names=['WORD', 'POS', 'TREE'],
                       defaults=[None]*3)
 
 
@@ -18,9 +18,7 @@ class Sentence(object):
 
         self.values = [[leaf.word for leaf in self.tree.leaves()],
                        [leaf.tag for leaf in self.tree.leaves()],
-                       [self.tree.oracle_label(i, j)
-                        for i in range(0, len(self))
-                        for j in range(i+1, len(self)+1)]]
+                       self.tree]
         for field, value in zip(fields, self.values):
             if isinstance(field, Iterable):
                 for j in range(len(field)):

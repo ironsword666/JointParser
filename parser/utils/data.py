@@ -24,6 +24,7 @@ class TextDataLoader(DataLoader):
                     data = pad(data, field.pad_index).to(device)
                 elif isinstance(data[0], Iterable):
                     data = [pad(f, field.pad_index).to(device)
+                            if isinstance(f[0], torch.Tensor) else f
                             for f in zip(*data)]
                 batch.append(data)
             yield batch
@@ -40,8 +41,9 @@ class TextDataset(Dataset):
             for field in fields if field is not None
         ]))
         for field in self.fields:
-            value = field.numericalize(getattr(corpus, field.name))
-            setattr(self, field.name, value)
+            setattr(self,
+                    field.name,
+                    field.numericalize(getattr(corpus, field.name)))
         # NOTE: the final bucket count is roughly equal to n_buckets
         self.lengths = [len(i) + sum([bool(field.bos), bool(field.bos)])
                         for i in corpus]

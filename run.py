@@ -31,8 +31,6 @@ if __name__ == '__main__':
                                help='seed for generating random numbers')
         subparser.add_argument('--threads', '-t', default=16, type=int,
                                help='max num of threads')
-        subparser.add_argument('--tree', action='store_true',
-                               help='whether to ensure well-formedness')
         subparser.add_argument('--feat', default='tag',
                                choices=['tag', 'char', 'bert'],
                                help='choices of additional features')
