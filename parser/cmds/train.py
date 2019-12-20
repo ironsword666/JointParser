@@ -70,10 +70,9 @@ class Train(CMD):
 
         for epoch in range(1, args.epochs + 1):
             start = datetime.now()
+            self.train(train.loader)
 
             print(f"Epoch {epoch} / {args.epochs}:")
-            loss, train_metric = self.train(train.loader)
-            print(f"{'train:':6} Loss: {loss:.4f} {train_metric}")
             loss, dev_metric = self.evaluate(dev.loader)
             print(f"{'dev:':6} Loss: {loss:.4f} {dev_metric}")
             loss, test_metric = self.evaluate(test.loader)

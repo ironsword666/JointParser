@@ -73,9 +73,6 @@ class CMD(object):
     def train(self, loader):
         self.model.train()
 
-        total_loss = 0
-        metric = EVALBMetric(self.args.evalb, self.args.evalb_param)
-
         for words, feats, (trees, labels) in loader:
             self.optimizer.zero_grad()
 
@@ -90,18 +87,6 @@ class CMD(object):
                                      self.args.clip)
             self.optimizer.step()
             self.scheduler.step()
-
-            preds = cky(scores, mask, self.args.nul_index)
-            preds = [build(tree,
-                           [(i, j, self.TREE.vocab.itos[label])
-                            for i, j, label in pred],
-                           unk)
-                     for tree, pred in zip(trees, preds)]
-            total_loss += loss.item()
-            metric(preds, trees, mask)
-        total_loss /= len(loader)
-
-        return total_loss, metric
 
     @torch.no_grad()
     def evaluate(self, loader):
