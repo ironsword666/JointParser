@@ -34,7 +34,7 @@ class CMD(object):
                                       tokenize=tokenizer.encode)
             else:
                 self.FEAT = Field('tags', bos=bos, eos=eos)
-            self.TREE = TreeField('trees', unk=unk)
+            self.TREE = TreeField('trees')
             if args.feat in ('char', 'bert'):
                 self.fields = Treebank(WORD=(self.WORD, self.FEAT),
                                        TREE=self.TREE)
@@ -63,8 +63,7 @@ class CMD(object):
             'pad_index': self.WORD.pad_index,
             'unk_index': self.WORD.unk_index,
             'bos_index': self.WORD.bos_index,
-            'eos_index': self.WORD.eos_index,
-            'nul_index': self.TREE.vocab[unk]
+            'eos_index': self.WORD.eos_index
         })
 
         print(f"Override the default configs\n{args}")
@@ -73,15 +72,15 @@ class CMD(object):
     def train(self, loader):
         self.model.train()
 
-        for words, feats, (trees, labels) in loader:
+        for words, feats, (trees, splits, labels) in loader:
             self.optimizer.zero_grad()
 
             batch_size, seq_len = words.shape
             lens = words.ne(self.args.pad_index).sum(1) - 1
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
-            scores = self.model(words, feats)
-            loss = self.get_loss(scores, labels, mask)
+            s_span, s_label = self.model(words, feats)
+            loss = self.get_loss(s_span, s_label, splits, labels, mask)
             loss.backward()
             nn.utils.clip_grad_norm_(self.model.parameters(),
                                      self.args.clip)
@@ -95,18 +94,17 @@ class CMD(object):
         total_loss = 0
         metric = EVALBMetric(self.args.evalb, self.args.evalb_param)
 
-        for words, feats, (trees, labels) in loader:
+        for words, feats, (trees, splits, labels) in loader:
             batch_size, seq_len = words.shape
             lens = words.ne(self.args.pad_index).sum(1) - 1
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
-            scores = self.model(words, feats)
-            loss = self.get_loss(scores, labels, mask)
-            preds = cky(scores, mask, self.args.nul_index)
+            s_span, s_label = self.model(words, feats)
+            loss = self.get_loss(s_span, s_label, splits, labels, mask)
+            preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
-                           [(i, j, self.TREE.vocab.itos[label])
-                            for i, j, label in pred],
-                           unk)
+                           [(i, j, span, self.TREE.vocab.itos[label])
+                            for i, j, span, label in pred])
                      for tree, pred in zip(trees, preds)]
             total_loss += loss.item()
             metric(preds, trees, mask)
@@ -124,19 +122,31 @@ class CMD(object):
             lens = words.ne(self.args.pad_index).sum(1) - 1
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
-            scores = self.model(words, feats)
-            preds = cky(scores, mask, self.args.nul_index)
+            s_span, s_label = self.model(words, feats)
+            preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
-                           [(i, j, self.TREE.vocab.itos[label])
-                            for i, j, label in pred],
-                           unk)
+                           [(i, j, span, self.TREE.vocab.itos[label])
+                            for i, j, span, label in pred])
                      for tree, pred in zip(trees, preds)]
             all_trees.extend(preds)
 
         return all_trees
 
-    def get_loss(self, scores, labels, mask):
-        scores, labels = scores[mask], labels[mask]
-        loss = self.criterion(scores, labels)
+    def get_loss(self, s_span, s_label, splits, labels, mask):
+        s_span, splits = s_span[mask], splits[mask]
+        s_label, labels = s_label[mask], labels[mask]
 
-        return loss
+        span_mask = splits.gt(0)
+        s_label, labels = s_label[span_mask], labels[span_mask]
+        split_loss = self.criterion(s_span, splits)
+        label_loss = self.criterion(s_label, labels)
+
+        return split_loss + label_loss
+
+    def decode(self, s_span, s_label, mask):
+        pred_labels = s_label.argmax(-1).tolist()
+        preds = [
+            [(i, j, span, label_chart[i][j]) for i, j, span in pred]
+            for pred, label_chart in zip(cky(s_span, mask), pred_labels)]
+
+        return preds

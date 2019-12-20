@@ -39,21 +39,30 @@ class Model(nn.Module):
         self.lstm_dropout = SharedDropout(p=args.lstm_dropout)
 
         # the MLP layers
-        self.mlp_f = MLP(n_in=args.n_lstm_hidden*2,
-                         n_out=args.n_mlp,
-                         dropout=args.mlp_dropout)
-        self.mlp_b = MLP(n_in=args.n_lstm_hidden*2,
-                         n_out=args.n_mlp,
-                         dropout=args.mlp_dropout)
+        self.mlp_span_f = MLP(n_in=args.n_lstm_hidden*2,
+                              n_out=args.n_mlp_span,
+                              dropout=args.mlp_dropout)
+        self.mlp_span_b = MLP(n_in=args.n_lstm_hidden*2,
+                              n_out=args.n_mlp_span,
+                              dropout=args.mlp_dropout)
+        self.mlp_label_f = MLP(n_in=args.n_lstm_hidden*2,
+                               n_out=args.n_mlp_label,
+                               dropout=args.mlp_dropout)
+        self.mlp_label_b = MLP(n_in=args.n_lstm_hidden*2,
+                               n_out=args.n_mlp_label,
+                               dropout=args.mlp_dropout)
 
         # the Biaffine layers
-        self.attn = Biaffine(n_in=args.n_mlp,
-                             n_out=args.n_labels,
-                             bias_x=True,
-                             bias_y=True)
+        self.span_attn = Biaffine(n_in=args.n_mlp_span,
+                                  n_out=2,
+                                  bias_x=True,
+                                  bias_y=True)
+        self.label_attn = Biaffine(n_in=args.n_mlp_label,
+                                   n_out=args.n_labels,
+                                   bias_x=True,
+                                   bias_y=True)
         self.pad_index = args.pad_index
         self.unk_index = args.unk_index
-        self.nul_index = args.nul_index
 
     def load_pretrained(self, embed=None):
         if embed is not None:
@@ -93,14 +102,20 @@ class Model(nn.Module):
         x, _ = pad_packed_sequence(x, True, total_length=seq_len)
         x = self.lstm_dropout(x)
 
+        x_f, x_b = x[:, :-1], x[:, 1:]
         # apply MLPs to the BiLSTM output states
-        x_f, x_b = self.mlp_f(x[:, :-1]), self.mlp_b(x[:, 1:])
+        span_f = self.mlp_span_f(x_f)
+        span_b = self.mlp_span_b(x_b)
+        label_f = self.mlp_label_f(x_f)
+        label_b = self.mlp_label_b(x_b)
 
+        # [batch_size, seq_len, seq_len, 2]
+        s_span = self.span_attn(span_f, span_b).permute(0, 2, 3, 1)
         # [batch_size, seq_len, seq_len, n_labels]
-        s = self.attn(x_f, x_b).permute(0, 2, 3, 1)
-        s[..., self.nul_index] = 0
+        s_label = self.label_attn(label_f, label_b).permute(0, 2, 3, 1)
+        s_span[..., 0] = 0
 
-        return s
+        return s_span, s_label
 
     @classmethod
     def load(cls, path):

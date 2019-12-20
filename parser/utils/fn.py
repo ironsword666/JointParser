@@ -83,13 +83,13 @@ def factorize(tree, i):
     return [(i, j, tree.label())] + spans
 
 
-def build(tree, sequence, nul):
+def build(tree, sequence):
     label = tree.label()
     leaves = [subtree for subtree in tree.subtrees()
               if not isinstance(subtree[0], Tree)]
 
-    def recover(label, children):
-        if label == nul:
+    def recover(span, label, children):
+        if span == 0:
             return children
         sublabels = [l for l in label.split('+') if not l.endswith('|<>')]
         if not sublabels:
@@ -100,11 +100,11 @@ def build(tree, sequence, nul):
         return [tree]
 
     def track(node):
-        i, j, label = next(node)
+        i, j, span, label = next(node)
         if j == i+1:
-            return recover(label, [leaves[i]])
+            return recover(span, label, [leaves[i]])
         else:
-            return recover(label, track(node) + track(node))
+            return recover(span, label, track(node) + track(node))
 
     tree = Tree(label, track(iter(sequence)))
 

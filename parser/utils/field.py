@@ -159,29 +159,33 @@ class TreeField(Field):
         counter, trees = Counter(), getattr(corpus, self.name)
         for tree in trees:
             cnk_tree = tree.copy(True)
-            cnk_tree.collapse_unary()
             cnk_tree.chomsky_normal_form('left', 0, 0)
+            cnk_tree.collapse_unary()
             counter.update([subtree.label()
                             for subtree in cnk_tree[0].subtrees()
                             if isinstance(subtree[0], Tree)])
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
 
     def numericalize(self, trees):
-        trees, labels = [self.transform(tree) for tree in trees], []
+        trees = [self.transform(tree) for tree in trees]
+        splits, labels = [], []
 
         for tree in trees:
             cnk_tree = tree.copy(True)
-            cnk_tree.collapse_unary()
             cnk_tree.chomsky_normal_form('left', 0, 0)
+            cnk_tree.collapse_unary()
             spans = factorize(cnk_tree[0], 0)  # ignore the ROOT
             seq_len = spans[0][1] + 1
-            chart = torch.full((seq_len, seq_len), self.pad_index).long()
-            chart[torch.ones_like(chart).triu_(1).gt(0)] = self.unk_index
+            split_chart = torch.full((seq_len, seq_len), self.pad_index).long()
+            label_chart = torch.full((seq_len, seq_len), self.pad_index).long()
+            split_chart[torch.ones_like(split_chart).triu_(1).gt(0)] = 0
             for i, j, label in spans:
-                chart[i, j] = self.vocab[label]
-            labels.append(chart)
+                split_chart[i, j] = 1
+                label_chart[i, j] = self.vocab[label]
+            splits.append(split_chart)
+            labels.append(label_chart)
 
-        return list(zip(trees, labels)) if labels else trees
+        return list(zip(trees, splits, labels)) if labels else trees
 
 
 class BertField(Field):
