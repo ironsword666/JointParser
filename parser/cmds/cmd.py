@@ -5,6 +5,7 @@ from parser.utils.alg import cky
 from parser.utils.common import bos, eos, pad, unk
 from parser.utils.corpus import Corpus, Treebank
 from parser.utils.field import BertField, CharField, Field, TreeField
+from parser.utils.fn import build
 from parser.utils.metric import EVALBMetric
 
 import torch
@@ -33,7 +34,7 @@ class CMD(object):
                                       tokenize=tokenizer.encode)
             else:
                 self.FEAT = Field('tags', bos=bos, eos=eos)
-            self.TREE = TreeField('trees', unk=())
+            self.TREE = TreeField('trees', unk=unk)
             if args.feat in ('char', 'bert'):
                 self.fields = Treebank(WORD=(self.WORD, self.FEAT),
                                        TREE=self.TREE)
@@ -63,7 +64,7 @@ class CMD(object):
             'unk_index': self.WORD.unk_index,
             'bos_index': self.WORD.bos_index,
             'eos_index': self.WORD.eos_index,
-            'nul_index': self.TREE.vocab[()]
+            'nul_index': self.TREE.vocab[unk]
         })
 
         print(f"Override the default configs\n{args}")
@@ -91,8 +92,10 @@ class CMD(object):
             self.scheduler.step()
 
             preds = cky(scores, mask, self.args.nul_index)
-            preds = [tree.convert().build([(i, j, self.TREE.vocab.itos[label])
-                                           for i, j, label in pred]).convert()
+            preds = [build(tree,
+                           [(i, j, self.TREE.vocab.itos[label])
+                            for i, j, label in pred],
+                           unk)
                      for tree, pred in zip(trees, preds)]
             total_loss += loss.item()
             metric(preds, trees, mask)
@@ -115,8 +118,10 @@ class CMD(object):
             scores = self.model(words, feats)
             loss = self.get_loss(scores, labels, mask)
             preds = cky(scores, mask, self.args.nul_index)
-            preds = [tree.convert().build([(i, j, self.TREE.vocab.itos[label])
-                                           for i, j, label in pred]).convert()
+            preds = [build(tree,
+                           [(i, j, self.TREE.vocab.itos[label])
+                            for i, j, label in pred],
+                           unk)
                      for tree, pred in zip(trees, preds)]
             total_loss += loss.item()
             metric(preds, trees, mask)
@@ -136,8 +141,10 @@ class CMD(object):
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             scores = self.model(words, feats)
             preds = cky(scores, mask, self.args.nul_index)
-            preds = [tree.convert().build([(i, j, self.TREE.vocab.itos[label])
-                                           for i, j, label in pred]).convert()
+            preds = [build(tree,
+                           [(i, j, self.TREE.vocab.itos[label])
+                            for i, j, label in pred],
+                           unk)
                      for tree, pred in zip(trees, preds)]
             all_trees.extend(preds)
 

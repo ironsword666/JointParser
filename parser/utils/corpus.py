@@ -3,7 +3,8 @@
 from collections import namedtuple
 from collections.abc import Iterable
 from parser.utils.field import Field
-from parser.utils.tree import load_trees
+
+from nltk.tree import Tree
 
 Treebank = namedtuple(typename='Treebank',
                       field_names=['WORD', 'POS', 'TREE'],
@@ -13,25 +14,19 @@ Treebank = namedtuple(typename='Treebank',
 class Sentence(object):
 
     def __init__(self, tree, fields):
-        self.tree = tree.convert()
+        self.tree = tree
         self.fields = [field if isinstance(field, Iterable) else [field]
                        for field in fields]
-
-        self.values = [[leaf.word for leaf in self.tree.leaves()],
-                       [leaf.tag for leaf in self.tree.leaves()],
-                       self.tree]
-        for field, value in zip(fields, self.values):
-            if isinstance(field, Iterable):
-                for j in range(len(field)):
-                    setattr(self, field[j].name, value)
-            else:
-                setattr(self, field.name, value)
+        self.values = [*zip(*tree.pos()), tree]
+        for field, value in zip(self.fields, self.values):
+            for f in field:
+                setattr(self, f.name, value)
 
     def __len__(self):
         return len(list(self.tree.leaves()))
 
     def __repr__(self):
-        return f"{self.tree.convert()}"
+        return self.tree.pformat(1000000)
 
 
 class Corpus(object):
@@ -66,9 +61,10 @@ class Corpus(object):
 
     @classmethod
     def load(cls, path, fields):
-        trees = load_trees(path)
         fields = [field if field is not None else Field(str(i))
                   for i, field in enumerate(fields)]
+        with open(path, 'r') as f:
+            trees = [Tree.fromstring(string) for string in f]
         sentences = [Sentence(tree, fields) for tree in trees]
 
         return cls(fields, sentences)

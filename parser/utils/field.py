@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
 from collections import Counter
+from parser.utils.fn import factorize
 from parser.utils.vocab import Vocab
 
 import torch
+from nltk.tree import Tree
 
 
 class Field(object):
@@ -156,30 +158,28 @@ class TreeField(Field):
     def build(self, corpus, min_freq=1):
         counter, trees = Counter(), getattr(corpus, self.name)
         for tree in trees:
-            nodes = [tree]
-            while nodes:
-                node = nodes.pop()
-                if type(node) == type(tree):
-                    counter[node.label] += 1
-                    nodes.extend(reversed(node.children))
+            cnk_tree = tree.copy(True)
+            cnk_tree.collapse_unary()
+            cnk_tree.chomsky_normal_form('left', 0, 0)
+            counter.update([subtree.label()
+                            for subtree in cnk_tree[0].subtrees()
+                            if isinstance(subtree[0], Tree)])
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
 
     def numericalize(self, trees):
         trees, labels = [self.transform(tree) for tree in trees], []
+
         for tree in trees:
-            nodes, spans = [tree], {}
-            seq_len = len(list(tree.leaves())) + 1
-            while nodes:
-                node = nodes.pop()
-                if type(node) == type(tree):
-                    spans[node.left, node.right] = node.label
-                    nodes.extend(reversed(node.children))
+            cnk_tree = tree.copy(True)
+            cnk_tree.collapse_unary()
+            cnk_tree.chomsky_normal_form('left', 0, 0)
+            spans = factorize(cnk_tree[0], 0)  # ignore the ROOT
+            seq_len = spans[0][1] + 1
             chart = torch.full((seq_len, seq_len), self.pad_index).long()
             chart[torch.ones_like(chart).triu_(1).gt(0)] = self.unk_index
-            for (i, j), label in spans.items():
+            for i, j, label in spans:
                 chart[i, j] = self.vocab[label]
             labels.append(chart)
-        trees = [tree.convert() for tree in trees]
 
         return list(zip(trees, labels)) if labels else trees
 

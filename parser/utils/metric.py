@@ -80,9 +80,9 @@ class EVALBMetric(Metric):
         pred_path = os.path.join(tempdir, 'preds.pid')
         gold_path = os.path.join(tempdir, 'golds.pid')
         with open(pred_path, 'w') as f:
-            f.writelines([f"{tree}\n" for tree in preds])
+            f.writelines([f"{tree.pformat(1000000)}\n" for tree in preds])
         with open(gold_path, 'w') as f:
-            f.writelines([f"{tree}\n" for tree in golds])
+            f.writelines([f"{tree.pformat(1000000)}\n" for tree in golds])
 
         completed = subprocess.run([self.evalb,
                                     "-p",

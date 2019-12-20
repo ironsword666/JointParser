@@ -4,6 +4,15 @@ data
 # ignore bash scripts
 *.sh
 
+# ignore intermediate files
+*.c
+*.o
+*.so
+build
+
+# ignore hidden files
+.*
+
 # ignore experimental results
 exp
 results

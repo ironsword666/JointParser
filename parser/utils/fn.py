@@ -2,6 +2,8 @@
 
 import unicodedata
 
+from nltk.tree import Tree
+
 
 def ispunct(token):
     return all(unicodedata.category(char).startswith('P')
@@ -68,3 +70,42 @@ def pad(tensors, padding_value=0):
     for i, tensor in enumerate(tensors):
         out_tensor[i][[slice(0, i) for i in tensor.size()]] = tensor
     return out_tensor
+
+
+def factorize(tree, i):
+    if len(tree) == 1 and not isinstance(tree[0], Tree):
+        return []
+    j, spans = i, []
+    for child in tree:
+        s = factorize(child, j)
+        j = s[0][1] if s else j+1
+        spans += s
+    return [(i, j, tree.label())] + spans
+
+
+def build(tree, sequence, nul):
+    label = tree.label()
+    leaves = [subtree for subtree in tree.subtrees()
+              if not isinstance(subtree[0], Tree)]
+
+    def recover(label, children):
+        if label == nul:
+            return children
+        sublabels = [l for l in label.split('+') if not l.endswith('|<>')]
+        if not sublabels:
+            return children
+        tree = Tree(sublabels[-1], children)
+        for sublabel in reversed(sublabels[:-1]):
+            tree = Tree(sublabel, [tree])
+        return [tree]
+
+    def track(node):
+        i, j, label = next(node)
+        if j == i+1:
+            return recover(label, [leaves[i]])
+        else:
+            return recover(label, track(node) + track(node))
+
+    tree = Tree(label, track(iter(sequence)))
+
+    return tree

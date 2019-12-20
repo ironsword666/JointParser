@@ -46,11 +46,11 @@ def kmeans(x, k):
     return centroids, clusters
 
 
-def cky(scores, mask, ignore_index=0):
+def cky(scores, mask, nul_index=0):
     lens = mask[:, 0].sum(-1)
     scores = scores.permute(1, 2, 3, 0)
     seq_len, seq_len, n_labels, batch_size = scores.shape
-    scores[0, lens, ignore_index, range(batch_size)] = float('-inf')
+    scores[0, lens, nul_index, range(batch_size)] = float('-inf')
     s = scores.new_zeros(seq_len, seq_len, batch_size)
     p_s = scores.new_zeros(seq_len, seq_len, batch_size).long()
     p_l = scores.new_zeros(seq_len, seq_len, batch_size).long()
