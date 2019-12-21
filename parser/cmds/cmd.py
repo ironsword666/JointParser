@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from parser.utils.alg import cky
+from parser.utils.alg import cky, crf
 from parser.utils.common import bos, eos, pad, unk
 from parser.utils.corpus import Corpus, Treebank
 from parser.utils.field import BertField, CharField, Field, TreeField
@@ -80,7 +80,7 @@ class CMD(object):
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             s_span, s_label = self.model(words, feats)
-            loss = self.get_loss(s_span, s_label, splits, labels, mask)
+            loss, s_span = self.get_loss(s_span, s_label, splits, labels, mask)
             loss.backward()
             nn.utils.clip_grad_norm_(self.model.parameters(),
                                      self.args.clip)
@@ -100,11 +100,12 @@ class CMD(object):
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             s_span, s_label = self.model(words, feats)
-            loss = self.get_loss(s_span, s_label, splits, labels, mask)
+            loss, s_span = self.get_loss(s_span, s_label, splits, labels, mask)
             preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
-                           [(i, j, span, self.TREE.vocab.itos[label])
-                            for i, j, span, label in pred])
+                           [(i, j, self.TREE.vocab.itos[label])
+                            for i, j, label in pred],
+                           unk)
                      for tree, pred in zip(trees, preds)]
             total_loss += loss.item()
             metric(preds, trees, mask)
@@ -125,28 +126,26 @@ class CMD(object):
             s_span, s_label = self.model(words, feats)
             preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
-                           [(i, j, span, self.TREE.vocab.itos[label])
-                            for i, j, span, label in pred])
+                           [(i, j, self.TREE.vocab.itos[label])
+                            for i, j, label in pred],
+                           unk)
                      for tree, pred in zip(trees, preds)]
             all_trees.extend(preds)
 
         return all_trees
 
     def get_loss(self, s_span, s_label, splits, labels, mask):
-        s_span, splits = s_span[mask], splits[mask]
-        s_label, labels = s_label[mask], labels[mask]
+        span_mask = splits & mask
+        span_loss, span_probs = crf(s_span, mask, splits)
+        label_loss = self.criterion(s_label[span_mask], labels[span_mask])
+        loss = span_loss + label_loss
 
-        span_mask = splits.gt(0)
-        s_label, labels = s_label[span_mask], labels[span_mask]
-        split_loss = self.criterion(s_span, splits)
-        label_loss = self.criterion(s_label, labels)
-
-        return split_loss + label_loss
+        return loss, s_span
 
     def decode(self, s_span, s_label, mask):
+        pred_spans = cky(s_span, mask)
         pred_labels = s_label.argmax(-1).tolist()
-        preds = [
-            [(i, j, span, label_chart[i][j]) for i, j, span in pred]
-            for pred, label_chart in zip(cky(s_span, mask), pred_labels)]
+        preds = [[(i, j, labels[i][j]) for i, j in spans]
+                 for spans, labels in zip(pred_spans, pred_labels)]
 
         return preds

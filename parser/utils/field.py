@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import Counter
-from parser.utils.fn import factorize
+from parser.utils.fn import factorize, satisfy_assumption
 from parser.utils.vocab import Vocab
 
 import torch
@@ -159,6 +159,7 @@ class TreeField(Field):
         counter, trees = Counter(), getattr(corpus, self.name)
         for tree in trees:
             cnk_tree = tree.copy(True)
+            satisfy_assumption(cnk_tree)
             cnk_tree.chomsky_normal_form('left', 0, 0)
             cnk_tree.collapse_unary()
             counter.update([subtree.label()
@@ -172,16 +173,19 @@ class TreeField(Field):
 
         for tree in trees:
             cnk_tree = tree.copy(True)
+            satisfy_assumption(cnk_tree)
             cnk_tree.chomsky_normal_form('left', 0, 0)
             cnk_tree.collapse_unary()
             spans = factorize(cnk_tree[0], 0)  # ignore the ROOT
             seq_len = spans[0][1] + 1
-            split_chart = torch.full((seq_len, seq_len), self.pad_index).long()
+            split_chart = torch.full((seq_len, seq_len), self.pad_index).bool()
             label_chart = torch.full((seq_len, seq_len), self.pad_index).long()
             split_chart[torch.ones_like(split_chart).triu_(1).gt(0)] = 0
             for i, j, label in spans:
                 split_chart[i, j] = 1
                 label_chart[i, j] = self.vocab[label]
+            assert split_chart.diagonal(
+                1).all(), f"{tree}\n{spans}"
             splits.append(split_chart)
             labels.append(label_chart)
 

@@ -3,6 +3,7 @@
 from parser.utils.fn import stripe
 
 import torch
+import torch.autograd as autograd
 from torch.nn.utils.rnn import pad_sequence
 
 
@@ -46,24 +47,67 @@ def kmeans(x, k):
     return centroids, clusters
 
 
-def cky(scores, mask, nul_index=0):
+@torch.enable_grad()
+def crf(scores, mask, target=None):
     lens = mask[:, 0].sum(-1)
-    scores = scores.permute(1, 2, 3, 0)
-    seq_len, seq_len, n_labels, batch_size = scores.shape
-    scores[0, lens, nul_index, range(batch_size)] = float('-inf')
+    batch_size, seq_len, _ = scores.shape
+    training = scores.requires_grad
+    # always enable the gradient computation of scores
+    # in order for the computation of marginal probs
+    s = inside(scores.requires_grad_(), mask)
+    logZ = s[0].gather(0, lens.unsqueeze(0)).sum()
+    # marginal probs are used for decoding, and can be computed by
+    # combining the inside algorithm and autograd mechanism
+    # instead of the entire inside-outside process
+    probs, = autograd.grad(logZ, scores, retain_graph=training)
+
+    if target is None:
+        return probs
+
+    loss = (logZ - scores[mask & target].sum())/batch_size
+    return loss, probs
+
+
+def inside(scores, mask):
+    batch_size, seq_len, _ = scores.shape
+    # [seq_len, seq_len, batch_size]
+    scores, mask = scores.permute(1, 2, 0), mask.permute(1, 2, 0)
+    s = torch.full_like(scores, float('-inf'))
+
+    for w in range(1, seq_len):
+        # n denotes the number of spans to iterate,
+        # from span (0, w) to span (n, n+w) given width w
+        n = seq_len - w
+        # diag_mask is used for ignoring the excess of each sentence
+        # [batch_size, n]
+        diag_mask = mask.diagonal(w)
+
+        if w == 1:
+            s.diagonal(w)[diag_mask] = scores.diagonal(w)[diag_mask]
+            continue
+        # [n, w, batch_size]
+        s_span = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
+        # [batch_size, n, w]
+        s_span = s_span.permute(2, 0, 1)
+        s_span = s_span[diag_mask].logsumexp(-1)
+        s.diagonal(w)[diag_mask] = s_span + scores.diagonal(w)[diag_mask]
+
+    return s
+
+
+def cky(scores, mask):
+    lens = mask[:, 0].sum(-1)
+    scores = scores.permute(1, 2, 0)
+    seq_len, seq_len, batch_size = scores.shape
     s = scores.new_zeros(seq_len, seq_len, batch_size)
-    p_s = scores.new_zeros(seq_len, seq_len, batch_size).long()
-    p_l = scores.new_zeros(seq_len, seq_len, batch_size).long()
+    p = scores.new_zeros(seq_len, seq_len, batch_size).long()
 
     for w in range(1, seq_len):
         n = seq_len - w
-        starts = p_s.new_tensor(range(n)).unsqueeze(0)
-        # [batch_size, n]
-        s_label, p_label = scores.diagonal(w).max(0)
-        p_l.diagonal(w).copy_(p_label)
+        starts = p.new_tensor(range(n)).unsqueeze(0)
 
         if w == 1:
-            s.diagonal(w).copy_(s_label)
+            s.diagonal(w).copy_(scores.diagonal(w))
             continue
         # [n, w, batch_size]
         s_split = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
@@ -71,20 +115,19 @@ def cky(scores, mask, nul_index=0):
         s_split = s_split.permute(2, 0, 1)
         # [batch_size, n]
         s_split, p_split = s_split.max(-1)
-        s.diagonal(w).copy_(s_split + s_label)
-        p_s.diagonal(w).copy_(p_split + starts + 1)
+        s.diagonal(w).copy_(s_split + scores.diagonal(w))
+        p.diagonal(w).copy_(p_split + starts + 1)
 
-    def backtrack(p_s, p_l, i, j):
+    def backtrack(p, i, j):
         if j == i + 1:
-            return [(i, j, p_l[i][j])]
-        split, label = p_s[i][j], p_l[i][j]
-        ltree = backtrack(p_s, p_l, i, split)
-        rtree = backtrack(p_s, p_l, split, j)
-        return [(i, j, label)] + ltree + rtree
+            return [(i, j)]
+        split = p[i][j]
+        ltree = backtrack(p, i, split)
+        rtree = backtrack(p, split, j)
+        return [(i, j)] + ltree + rtree
 
-    p_s = p_s.permute(2, 0, 1).tolist()
-    p_l = p_l.permute(2, 0, 1).tolist()
-    trees = [backtrack(p_s[i], p_l[i], 0, length)
+    p = p.permute(2, 0, 1).tolist()
+    trees = [backtrack(p[i], 0, length)
              for i, length in enumerate(lens.tolist())]
 
     return trees
