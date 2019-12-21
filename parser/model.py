@@ -55,7 +55,7 @@ class Model(nn.Module):
         # the Biaffine layers
         self.span_attn = Biaffine(n_in=args.n_mlp_span,
                                   bias_x=True,
-                                  bias_y=True)
+                                  bias_y=False)
         self.label_attn = Biaffine(n_in=args.n_mlp_label,
                                    n_out=args.n_labels,
                                    bias_x=True,

@@ -21,7 +21,7 @@ if __name__ == '__main__':
         subparser = subcommand.add_subparser(name, subparsers)
         subparser.add_argument('--conf', '-c', default='config.ini',
                                help='path to config file')
-        subparser.add_argument('--file', '-f', default='exp/ptb',
+        subparser.add_argument('--file', '-f', default='exp/ptb.char',
                                help='path to saved files')
         subparser.add_argument('--preprocess', '-p', action='store_true',
                                help='whether to preprocess the data first')
@@ -29,7 +29,7 @@ if __name__ == '__main__':
                                help='ID of GPU to use')
         subparser.add_argument('--seed', '-s', default=1, type=int,
                                help='seed for generating random numbers')
-        subparser.add_argument('--threads', '-t', default=16, type=int,
+        subparser.add_argument('--threads', '-t', default=8, type=int,
                                help='max num of threads')
         subparser.add_argument('--feat', default='char',
                                choices=['tag', 'char', 'bert'],

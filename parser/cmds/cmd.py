@@ -104,8 +104,7 @@ class CMD(object):
             preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
                            [(i, j, self.TREE.vocab.itos[label])
-                            for i, j, label in pred],
-                           unk)
+                            for i, j, label in pred])
                      for tree, pred in zip(trees, preds)]
             total_loss += loss.item()
             metric(preds, trees, mask)
@@ -127,8 +126,7 @@ class CMD(object):
             preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
                            [(i, j, self.TREE.vocab.itos[label])
-                            for i, j, label in pred],
-                           unk)
+                            for i, j, label in pred])
                      for tree, pred in zip(trees, preds)]
             all_trees.extend(preds)
 

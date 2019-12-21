@@ -72,6 +72,23 @@ def pad(tensors, padding_value=0):
     return out_tensor
 
 
+def binarize(tree):
+    tree = tree.copy(True)
+    nodes = [tree]
+    while nodes:
+        node = nodes.pop()
+        if isinstance(node, Tree):
+            nodes.extend([child for child in node])
+            if len(node) > 1:
+                for i, child in enumerate(node):
+                    if not isinstance(child[0], Tree):
+                        node[i] = Tree(f"{node.label()}|<>", [child])
+    tree.chomsky_normal_form('left', 0, 0)
+    tree.collapse_unary()
+
+    return tree
+
+
 def factorize(tree, i):
     if len(tree) == 1 and not isinstance(tree[0], Tree):
         return []
@@ -83,14 +100,12 @@ def factorize(tree, i):
     return [(i, j, tree.label())] + spans
 
 
-def build(tree, sequence, nul):
+def build(tree, sequence):
     label = tree.label()
     leaves = [subtree for subtree in tree.subtrees()
               if not isinstance(subtree[0], Tree)]
 
     def recover(label, children):
-        if label == nul:
-            return children
         sublabels = [l for l in label.split('+') if not l.endswith('|<>')]
         if not sublabels:
             return children
@@ -109,20 +124,3 @@ def build(tree, sequence, nul):
     tree = Tree(label, track(iter(sequence)))
 
     return tree
-
-
-def satisfy_assumption(tree, suffix="|<>"):
-    nodeList = [(tree, [tree.label()])]
-    while nodeList != []:
-        node, parent = nodeList.pop()
-        if isinstance(node, Tree):
-            originalNode = node.label()
-            for child in node:
-                nodeList.append((child, parent))
-            if len(node) > 1:
-                numChildren = len(node)
-                for i in range(numChildren):
-                    if not isinstance(node[i][0], Tree):
-                        newHead = f"{originalNode}{suffix}"
-                        newNode = Tree(newHead, [node[i]])
-                        node[i] = newNode

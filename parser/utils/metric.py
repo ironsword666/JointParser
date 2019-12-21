@@ -70,6 +70,8 @@ class EVALBMetric(Metric):
                             'Prec.', 'Bracket', 'gold', 'test',
                             'Bracket', 'Words', 'Tags', 'Accracy']
 
+        self.n = 0.0
+        self.n_cm = 0.0
         self.tp = 0.0
         self.pred = 0.0
         self.gold = 0.0
@@ -96,19 +98,25 @@ class EVALBMetric(Metric):
             stripped = line.strip().split()
             if len(stripped) == 12 and stripped != self.header_line:
                 numeric_line = [float(x) for x in stripped]
+                self.n += 1
+                self.n_cm += numeric_line[5] == numeric_line[7]
                 self.tp += numeric_line[5]
                 self.pred += numeric_line[7]
                 self.gold += numeric_line[6]
         shutil.rmtree(tempdir)
 
     def __repr__(self):
-        p, r, f = self.precision, self.recall, self.f_score
+        c, p, r, f = self.cm, self.precision, self.recall, self.f_score
 
-        return f"P: {p:6.2%} R: {r:6.2%} F: {f:6.2%}"
+        return f"C: {c:6.2%} P: {p:6.2%} R: {r:6.2%} F: {f:6.2%}"
 
     @property
     def score(self):
         return self.f_score
+
+    @property
+    def cm(self):
+        return self.n_cm / (self.n + self.eps)
 
     @property
     def precision(self):
