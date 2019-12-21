@@ -14,7 +14,6 @@ Treebank = namedtuple(typename='Treebank',
 class Sentence(object):
 
     def __init__(self, tree, fields):
-        self.tree = tree
         self.fields = [field if isinstance(field, Iterable) else [field]
                        for field in fields]
         self.values = [*zip(*tree.pos()), tree]
@@ -23,10 +22,10 @@ class Sentence(object):
                 setattr(self, f.name, value)
 
     def __len__(self):
-        return len(list(self.tree.leaves()))
+        return len(list(getattr(self, self.fields[-1][0].name).leaves()))
 
     def __repr__(self):
-        return self.tree.pformat(1000000)
+        return getattr(self, self.fields[-1][0].name).pformat(1000000)
 
 
 class Corpus(object):

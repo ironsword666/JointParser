@@ -117,7 +117,7 @@ class CMD(object):
         self.model.eval()
 
         all_trees = []
-        for words, feats, trees in loader:
+        for words, feats, (trees, splits, labels) in loader:
             batch_size, seq_len = words.shape
             lens = words.ne(self.args.pad_index).sum(1) - 1
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)

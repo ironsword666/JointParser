@@ -50,6 +50,7 @@ def kmeans(x, k):
 @torch.enable_grad()
 def crf(scores, mask, target=None):
     lens = mask[:, 0].sum(-1)
+    total = lens.sum()
     batch_size, seq_len, _ = scores.shape
     training = scores.requires_grad
     # always enable the gradient computation of scores
@@ -64,7 +65,7 @@ def crf(scores, mask, target=None):
     if target is None:
         return probs
 
-    loss = (logZ - scores[mask & target].sum())/batch_size
+    loss = (logZ - scores[mask & target].sum()) / total
     return loss, probs
 
 

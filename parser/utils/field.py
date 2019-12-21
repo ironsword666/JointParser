@@ -183,7 +183,7 @@ class TreeField(Field):
             splits.append(split_chart)
             labels.append(label_chart)
 
-        return list(zip(trees, splits, labels)) if labels else trees
+        return list(zip(trees, splits, labels))
 
 
 class BertField(Field):
