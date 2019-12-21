@@ -123,6 +123,7 @@ class CMD(object):
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             s_span, s_label = self.model(words, feats)
+            s_span = crf(s_span, mask)
             preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
                            [(i, j, self.TREE.vocab.itos[label])

@@ -97,12 +97,12 @@ class EVALBMetric(Metric):
         for line in completed.stdout.split("\n"):
             stripped = line.strip().split()
             if len(stripped) == 12 and stripped != self.header_line:
-                numeric_line = [float(x) for x in stripped]
+                nums = [float(x) for x in stripped]
                 self.n += 1
-                self.n_cm += numeric_line[5] == numeric_line[7]
-                self.tp += numeric_line[5]
-                self.pred += numeric_line[7]
-                self.gold += numeric_line[6]
+                self.n_cm += nums[5] == nums[6] == nums[7]
+                self.tp += nums[5]
+                self.pred += nums[7]
+                self.gold += nums[6]
         shutil.rmtree(tempdir)
 
     def __repr__(self):
