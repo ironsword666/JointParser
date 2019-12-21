@@ -140,7 +140,7 @@ class CMD(object):
         label_loss = self.criterion(s_label[span_mask], labels[span_mask])
         loss = span_loss + label_loss
 
-        return loss, s_span
+        return loss, span_probs
 
     def decode(self, s_span, s_label, mask):
         pred_spans = cky(s_span, mask)
