@@ -3,6 +3,7 @@
 from collections.abc import Iterable
 from itertools import chain
 from parser.utils.alg import kmeans
+from parser.utils.field import Field
 from parser.utils.fn import pad
 
 import torch
@@ -20,12 +21,12 @@ class TextDataLoader(DataLoader):
         for raw_batch in super(TextDataLoader, self).__iter__():
             batch, device = [], 'cuda' if torch.cuda.is_available() else 'cpu'
             for data, field in zip(raw_batch, self.fields):
-                if isinstance(data[0], torch.Tensor):
-                    data = pad(data, field.pad_index).to(device)
-                elif isinstance(data[0], Iterable):
-                    data = [pad(f, field.pad_index).to(device)
-                            if isinstance(f[0], torch.Tensor) else f
-                            for f in zip(*data)]
+                if isinstance(field, Field):
+                    if isinstance(data[0], torch.Tensor):
+                        data = pad(data, field.pad_index).to(device)
+                    elif isinstance(data[0], Iterable):
+                        data = [pad(f, field.pad_index).to(device)
+                                for f in zip(*data)]
                 batch.append(data)
             yield batch
 
@@ -43,7 +44,7 @@ class TextDataset(Dataset):
         for field in self.fields:
             setattr(self,
                     field.name,
-                    field.numericalize(getattr(corpus, field.name)))
+                    field.transform(getattr(corpus, field.name)))
         # NOTE: the final bucket count is roughly equal to n_buckets
         self.lengths = [len(i) + sum([bool(field.bos), bool(field.bos)])
                         for i in corpus]

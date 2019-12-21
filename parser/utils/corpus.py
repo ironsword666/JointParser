@@ -3,29 +3,39 @@
 from collections import namedtuple
 from collections.abc import Iterable
 from parser.utils.field import Field
+from parser.utils.fn import binarize, factorize
 
 from nltk.tree import Tree
 
 Treebank = namedtuple(typename='Treebank',
-                      field_names=['WORD', 'POS', 'TREE'],
-                      defaults=[None]*3)
+                      field_names=['TREE', 'WORD', 'POS', 'CHART'],
+                      defaults=[None]*4)
 
 
 class Sentence(object):
 
-    def __init__(self, tree, fields):
+    def __init__(self, fields, tree):
+        self.tree = tree
         self.fields = [field if isinstance(field, Iterable) else [field]
                        for field in fields]
-        self.values = [*zip(*tree.pos()), tree]
+        self.values = [tree, *zip(*tree.pos()), factorize(binarize(tree)[0])]
         for field, value in zip(self.fields, self.values):
             for f in field:
                 setattr(self, f.name, value)
 
     def __len__(self):
-        return len(list(getattr(self, self.fields[-1][0].name).leaves()))
+        return len(list(self.tree.leaves()))
 
     def __repr__(self):
-        return getattr(self, self.fields[-1][0].name).pformat(1000000)
+        return self.tree.pformat(1000000)
+
+    def __setattr__(self, name, value):
+        if isinstance(value, Tree) and hasattr(self, name):
+            tree = getattr(self, name)
+            tree.clear()
+            tree.extend([value[0]])
+        else:
+            self.__dict__[name] = value
 
 
 class Corpus(object):
@@ -64,7 +74,7 @@ class Corpus(object):
                   for i, field in enumerate(fields)]
         with open(path, 'r') as f:
             trees = [Tree.fromstring(string) for string in f]
-        sentences = [Sentence(tree, fields) for tree in trees]
+        sentences = [Sentence(fields, tree) for tree in trees]
 
         return cls(fields, sentences)
 

@@ -1,14 +1,32 @@
 # -*- coding: utf-8 -*-
 
 from collections import Counter
-from parser.utils.fn import binarize, factorize
 from parser.utils.vocab import Vocab
 
 import torch
-from nltk.tree import Tree
 
 
-class Field(object):
+class RawField(object):
+
+    def __init__(self, name, fn=None):
+        super(RawField, self).__init__()
+
+        self.name = name
+        self.fn = fn
+
+    def __repr__(self):
+        return f"({self.name}): {self.__class__.__name__}()"
+
+    def preprocess(self, sequence):
+        if self.fn is not None:
+            sequence = self.fn(sequence)
+        return sequence
+
+    def transform(self, sequences):
+        return [self.preprocess(sequence) for sequence in sequences]
+
+
+class Field(RawField):
 
     def __init__(self, name, pad=None, unk=None, bos=None, eos=None,
                  lower=False, use_vocab=True, tokenize=None, fn=None):
@@ -60,26 +78,27 @@ class Field(object):
     def eos_index(self):
         return self.specials.index(self.eos)
 
-    def transform(self, sequence):
+    def preprocess(self, sequence):
+        if self.fn is not None:
+            sequence = self.fn(sequence)
         if self.tokenize is not None:
             sequence = self.tokenize(sequence)
         if self.lower:
             sequence = [str.lower(token) for token in sequence]
-        if self.fn is not None:
-            sequence = self.fn(sequence)
 
         return sequence
 
     def build(self, corpus, min_freq=1, embed=None):
         sequences = getattr(corpus, self.name)
-        counter = Counter(token for sequence in sequences
-                          for token in self.transform(sequence))
+        counter = Counter(token
+                          for sequence in sequences
+                          for token in self.preprocess(sequence))
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
 
         if not embed:
             self.embed = None
         else:
-            tokens = self.transform(embed.tokens)
+            tokens = self.preprocess(embed.tokens)
             # if the `unk` token has existed in the pretrained,
             # then replace it with a self-defined one
             if embed.unk:
@@ -90,8 +109,8 @@ class Field(object):
             self.embed[self.vocab.token2id(tokens)] = embed.vectors
             self.embed /= torch.std(self.embed)
 
-    def numericalize(self, sequences):
-        sequences = [self.transform(sequence) for sequence in sequences]
+    def transform(self, sequences):
+        sequences = [self.preprocess(sequence) for sequence in sequences]
         if self.use_vocab:
             sequences = [self.vocab.token2id(sequence)
                          for sequence in sequences]
@@ -112,14 +131,16 @@ class CharField(Field):
 
     def build(self, corpus, min_freq=1, embed=None):
         sequences = getattr(corpus, self.name)
-        counter = Counter(char for sequence in sequences for token in sequence
-                          for char in self.transform(token))
+        counter = Counter(char
+                          for sequence in sequences
+                          for token in sequence
+                          for char in self.preprocess(token))
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
 
         if not embed:
             self.embed = None
         else:
-            tokens = self.transform(embed.tokens)
+            tokens = self.preprocess(embed.tokens)
             # if the `unk` token has existed in the pretrained,
             # then replace it with a self-defined one
             if embed.unk:
@@ -129,8 +150,8 @@ class CharField(Field):
             self.embed = torch.zeros(len(self.vocab), embed.dim)
             self.embed[self.vocab.token2id(tokens)] = embed.vectors
 
-    def numericalize(self, sequences):
-        sequences = [[self.transform(token) for token in sequence]
+    def transform(self, sequences):
+        sequences = [[self.preprocess(token) for token in sequence]
                      for sequence in sequences]
         if self.fix_len <= 0:
             self.fix_len = max(len(token) for sequence in sequences
@@ -153,50 +174,45 @@ class CharField(Field):
         return sequences
 
 
-class TreeField(Field):
+class ChartField(Field):
 
     def build(self, corpus, min_freq=1):
-        counter, trees = Counter(), getattr(corpus, self.name)
-        for tree in trees:
-            tree = binarize(tree)
-            counter.update([subtree.label()
-                            for subtree in tree[0].subtrees()
-                            if isinstance(subtree[0], Tree)])
+        sequences = getattr(corpus, self.name)
+        counter = Counter(label
+                          for sequence in sequences
+                          for i, j, label in self.preprocess(sequence))
+
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
 
-    def numericalize(self, trees):
-        trees = [self.transform(tree) for tree in trees]
-        splits, labels = [], []
+    def transform(self, sequences):
+        sequences = [self.preprocess(sequence) for sequence in sequences]
+        spans, labels = [], []
 
-        for tree in trees:
-            tree = binarize(tree)
-            spans = factorize(tree[0], 0)  # ignore the ROOT
-            seq_len = spans[0][1] + 1
-            split_chart = torch.full((seq_len, seq_len), self.pad_index).bool()
+        for sequence in sequences:
+            seq_len = sequence[0][1] + 1
+            span_chart = torch.full((seq_len, seq_len), self.pad_index).bool()
             label_chart = torch.full((seq_len, seq_len), self.pad_index).long()
-            split_chart[torch.ones_like(split_chart).triu_(1).gt(0)] = 0
-            for i, j, label in spans:
-                split_chart[i, j] = 1
+            span_chart[torch.ones_like(span_chart).triu_(1).gt(0)] = 0
+            for i, j, label in sequence:
+                span_chart[i, j] = 1
                 label_chart[i, j] = self.vocab[label]
-            assert split_chart.diagonal(
-                1).all(), f"{tree}\n{spans}"
-            splits.append(split_chart)
+            spans.append(span_chart)
             labels.append(label_chart)
 
-        return list(zip(trees, splits, labels))
+        return list(zip(spans, labels))
 
 
 class BertField(Field):
 
-    def numericalize(self, sequences):
+    def transform(self, sequences):
         subwords, lens = [], []
         sequences = [([self.bos] if self.bos else []) + list(sequence) +
                      ([self.eos] if self.eos else [])
                      for sequence in sequences]
 
         for sequence in sequences:
-            sequence = [self.transform(token) for token in sequence]
-            sequence = [piece if piece else self.transform(self.pad)
+            sequence = [self.preprocess(token) for token in sequence]
+            sequence = [piece if piece else self.preprocess(self.pad)
                         for piece in sequence]
             subwords.append(sum(sequence, []))
             lens.append(torch.tensor([len(piece) for piece in sequence]))

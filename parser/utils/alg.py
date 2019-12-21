@@ -111,13 +111,13 @@ def cky(scores, mask):
             s.diagonal(w).copy_(scores.diagonal(w))
             continue
         # [n, w, batch_size]
-        s_split = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
+        s_span = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
         # [batch_size, n, w]
-        s_split = s_split.permute(2, 0, 1)
+        s_span = s_span.permute(2, 0, 1)
         # [batch_size, n]
-        s_split, p_split = s_split.max(-1)
-        s.diagonal(w).copy_(s_split + scores.diagonal(w))
-        p.diagonal(w).copy_(p_split + starts + 1)
+        s_span, p_span = s_span.max(-1)
+        s.diagonal(w).copy_(s_span + scores.diagonal(w))
+        p.diagonal(w).copy_(p_span + starts + 1)
 
     def backtrack(p, i, j):
         if j == i + 1:

@@ -89,15 +89,17 @@ def binarize(tree):
     return tree
 
 
-def factorize(tree, i):
-    if len(tree) == 1 and not isinstance(tree[0], Tree):
-        return []
-    j, spans = i, []
-    for child in tree:
-        s = factorize(child, j)
-        j = s[0][1] if s else j+1
-        spans += s
-    return [(i, j, tree.label())] + spans
+def factorize(tree):
+    def track(tree, i):
+        if len(tree) == 1 and not isinstance(tree[0], Tree):
+            return []
+        j, spans = i, []
+        for child in tree:
+            s = track(child, j)
+            j = s[0][1] if s else j+1
+            spans += s
+        return [(i, j, tree.label())] + spans
+    return track(tree, 0)
 
 
 def build(tree, sequence):
