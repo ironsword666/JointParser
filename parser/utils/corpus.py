@@ -74,7 +74,8 @@ class Corpus(object):
                   for i, field in enumerate(fields)]
         with open(path, 'r') as f:
             trees = [Tree.fromstring(string) for string in f]
-        sentences = [Sentence(fields, tree) for tree in trees]
+        sentences = [Sentence(fields, tree) for tree in trees
+                     if not len(tree) == 1 or isinstance(tree[0][0], Tree)]
 
         return cls(fields, sentences)
 
