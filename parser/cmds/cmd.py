@@ -6,8 +6,8 @@ from parser.utils.common import bos, eos, pad, unk
 from parser.utils.corpus import Corpus, Treebank
 from parser.utils.field import (BertField, CharField, ChartField, Field,
                                 RawField)
-from parser.utils.fn import build
-from parser.utils.metric import EVALBMetric
+from parser.utils.fn import build, factorize
+from parser.utils.metric import BracketMetric
 
 import torch
 import torch.nn as nn
@@ -97,7 +97,7 @@ class CMD(object):
         self.model.eval()
 
         total_loss = 0
-        metric = EVALBMetric(self.args.evalb, self.args.evalb_param)
+        metric = BracketMetric()
 
         for trees, words, feats, (spans, labels) in loader:
             batch_size, seq_len = words.shape
@@ -112,7 +112,10 @@ class CMD(object):
                             for i, j, label in pred])
                      for tree, pred in zip(trees, preds)]
             total_loss += loss.item()
-            metric(preds, trees, mask)
+            metric([factorize(tree, self.args.delete, self.args.equal)
+                    for tree in preds],
+                   [factorize(tree, self.args.delete, self.args.equal)
+                    for tree in trees])
         total_loss /= len(loader)
 
         return total_loss, metric

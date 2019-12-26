@@ -29,3 +29,6 @@ __pycache__
 
 # ignore vscode
 .vscode
+
+# ignore EVALB
+EVALB

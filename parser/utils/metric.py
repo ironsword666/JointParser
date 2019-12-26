@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import os
-import shutil
-import subprocess
-import tempfile
+from collections import Counter
+from parser.utils.fn import factorize
 
 
 class Metric(object):
@@ -27,7 +25,7 @@ class Metric(object):
 
 class AttachmentMetric(Metric):
 
-    def __init__(self, eps=1e-5):
+    def __init__(self, eps=1e-8):
         super(Metric, self).__init__()
 
         self.eps = eps
@@ -59,76 +57,75 @@ class AttachmentMetric(Metric):
         return self.correct_rels / (self.total + self.eps)
 
 
-class EVALBMetric(Metric):
+class BracketMetric(Metric):
 
-    def __init__(self, evalb, evalb_param, eps=1e-5):
-        super(EVALBMetric, self).__init__()
-
-        self.evalb = evalb
-        self.evalb_param = evalb_param
-        self.header_line = ['ID', 'Len.', 'Stat.', 'Recal',
-                            'Prec.', 'Bracket', 'gold', 'test',
-                            'Bracket', 'Words', 'Tags', 'Accracy']
+    def __init__(self, eps=1e-8):
+        super(BracketMetric, self).__init__()
 
         self.n = 0.0
-        self.n_cm = 0.0
-        self.tp = 0.0
+        self.n_ucm = 0.0
+        self.n_lcm = 0.0
+        self.utp = 0.0
+        self.ltp = 0.0
         self.pred = 0.0
         self.gold = 0.0
         self.eps = eps
 
-    def __call__(self, preds, golds, mask):
-        tempdir = tempfile.mkdtemp()
-        pred_path = os.path.join(tempdir, 'preds.pid')
-        gold_path = os.path.join(tempdir, 'golds.pid')
-        with open(pred_path, 'w') as f:
-            f.writelines([f"{tree.pformat(1000000)}\n" for tree in preds])
-        with open(gold_path, 'w') as f:
-            f.writelines([f"{tree.pformat(1000000)}\n" for tree in golds])
-
-        completed = subprocess.run([self.evalb,
-                                    "-p",
-                                    self.evalb_param,
-                                    gold_path,
-                                    pred_path],
-                                   stdout=subprocess.PIPE,
-                                   universal_newlines=True,
-                                   check=True)
-        for line in completed.stdout.split("\n"):
-            stripped = line.strip().split()
-            if len(stripped) == 12 and stripped != self.header_line:
-                nums = [float(x) for x in stripped]
-                self.n += 1
-                self.n_cm += nums[5] == nums[6] == nums[7]
-                self.tp += nums[5]
-                self.pred += nums[7]
-                self.gold += nums[6]
-        shutil.rmtree(tempdir)
+    def __call__(self, preds, golds):
+        for pred, gold in zip(preds, golds):
+            upred = Counter([(i, j) for i, j, label in pred])
+            ugold = Counter([(i, j) for i, j, label in gold])
+            utp = list((upred & ugold).elements())
+            lpred = Counter(pred)
+            lgold = Counter(gold)
+            ltp = list((lpred & lgold).elements())
+            self.n += 1
+            self.n_ucm += len(utp) == len(pred) == len(gold)
+            self.n_lcm += len(ltp) == len(pred) == len(gold)
+            self.utp += len(utp)
+            self.ltp += len(ltp)
+            self.pred += len(pred)
+            self.gold += len(gold)
 
     def __repr__(self):
-        c, p, r, f = self.cm, self.precision, self.recall, self.f_score
+        s = f"UCM: {self.ucm:6.2%} LCM: {self.lcm:6.2%} "
+        s += f"UP: {self.up:6.2%} UR: {self.ur:6.2%} UF: {self.uf:6.2%} "
+        s += f"LP: {self.lp:6.2%} LR: {self.lr:6.2%} LF: {self.lf:6.2%}"
 
-        return f"C: {c:6.2%} P: {p:6.2%} R: {r:6.2%} F: {f:6.2%}"
+        return s
 
     @property
     def score(self):
-        return self.f_score
+        return self.lf
 
     @property
-    def cm(self):
-        return self.n_cm / (self.n + self.eps)
+    def ucm(self):
+        return self.n_ucm / (self.n + self.eps)
 
     @property
-    def precision(self):
-        return self.tp / (self.pred + self.eps)
+    def lcm(self):
+        return self.n_lcm / (self.n + self.eps)
 
     @property
-    def recall(self):
-        return self.tp / (self.gold + self.eps)
+    def up(self):
+        return self.utp / (self.pred + self.eps)
 
     @property
-    def f_score(self):
-        precision = self.precision
-        recall = self.recall
+    def ur(self):
+        return self.utp / (self.gold + self.eps)
 
-        return 2 * precision * recall / (precision + recall + self.eps)
+    @property
+    def uf(self):
+        return 2 * self.utp / (self.pred + self.gold + self.eps)
+
+    @property
+    def lp(self):
+        return self.ltp / (self.pred + self.eps)
+
+    @property
+    def lr(self):
+        return self.ltp / (self.gold + self.eps)
+
+    @property
+    def lf(self):
+        return 2 * self.ltp / (self.pred + self.gold + self.eps)
