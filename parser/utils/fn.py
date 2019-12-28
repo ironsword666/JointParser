@@ -102,7 +102,9 @@ def factorize(tree, delete_labels=None, equal_labels=None):
         for child in tree:
             j, s = track(child, j)
             spans += s
-        return j, ([(i, j, label)] + spans if label is not None else spans)
+        if label is not None and j > i:
+            spans = [(i, j, label)] + spans
+        return j, spans
     return track(tree, 0)[1]
 
 
