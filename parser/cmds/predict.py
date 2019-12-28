@@ -15,6 +15,8 @@ class Predict(CMD):
         subparser = parser.add_parser(
             name, help='Use a trained model to make predictions.'
         )
+        subparser.add_argument('--marg', action='store_true',
+                               help='whether to use marginal probs')
         subparser.add_argument('--fdata', default='data/ptb/test.pid',
                                help='path to dataset')
         subparser.add_argument('--fpred', default='pred.pid',
