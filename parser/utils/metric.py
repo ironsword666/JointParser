@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from collections import Counter
-from parser.utils.fn import factorize
 
 
 class Metric(object):
