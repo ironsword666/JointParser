@@ -39,16 +39,16 @@ class Model(nn.Module):
         self.lstm_dropout = SharedDropout(p=args.lstm_dropout)
 
         # the MLP layers
-        self.mlp_span_f = MLP(n_in=args.n_lstm_hidden*2,
+        self.mlp_span_l = MLP(n_in=args.n_lstm_hidden*2,
                               n_out=args.n_mlp_span,
                               dropout=args.mlp_dropout)
-        self.mlp_span_b = MLP(n_in=args.n_lstm_hidden*2,
+        self.mlp_span_r = MLP(n_in=args.n_lstm_hidden*2,
                               n_out=args.n_mlp_span,
                               dropout=args.mlp_dropout)
-        self.mlp_label_f = MLP(n_in=args.n_lstm_hidden*2,
+        self.mlp_label_l = MLP(n_in=args.n_lstm_hidden*2,
                                n_out=args.n_mlp_label,
                                dropout=args.mlp_dropout)
-        self.mlp_label_b = MLP(n_in=args.n_lstm_hidden*2,
+        self.mlp_label_r = MLP(n_in=args.n_lstm_hidden*2,
                                n_out=args.n_mlp_label,
                                dropout=args.mlp_dropout)
 
@@ -101,17 +101,18 @@ class Model(nn.Module):
         x, _ = pad_packed_sequence(x, True, total_length=seq_len)
         x = self.lstm_dropout(x)
 
-        x_f, x_b = x[:, :-1], x[:, 1:]
+        x_f, x_b = x.chunk(2, dim=-1)
+        x = torch.cat((x_f[:, :-1], x_b[:, 1:]), -1)
         # apply MLPs to the BiLSTM output states
-        span_f = self.mlp_span_f(x_f)
-        span_b = self.mlp_span_b(x_b)
-        label_f = self.mlp_label_f(x_f)
-        label_b = self.mlp_label_b(x_b)
+        span_l = self.mlp_span_l(x)
+        span_r = self.mlp_span_r(x)
+        label_l = self.mlp_label_l(x)
+        label_r = self.mlp_label_r(x)
 
         # [batch_size, seq_len, seq_len]
-        s_span = self.span_attn(span_f, span_b)
+        s_span = self.span_attn(span_l, span_r)
         # [batch_size, seq_len, seq_len, n_labels]
-        s_label = self.label_attn(label_f, label_b).permute(0, 2, 3, 1)
+        s_label = self.label_attn(label_l, label_r).permute(0, 2, 3, 1)
 
         return s_span, s_label
 
