@@ -132,7 +132,7 @@ class CMD(object):
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             s_span, s_label = self.model(words, feats)
             if self.args.marg:
-                s_span = crf(s_span, mask)
+                s_span = crf(s_span, mask, marg=True)
             preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
@@ -144,7 +144,7 @@ class CMD(object):
 
     def get_loss(self, s_span, s_label, spans, labels, mask):
         span_mask = spans & mask
-        span_loss, span_probs = crf(s_span, mask, spans)
+        span_loss, span_probs = crf(s_span, mask, spans, self.args.marg)
         label_loss = self.criterion(s_label[span_mask], labels[span_mask])
         loss = span_loss + label_loss
 

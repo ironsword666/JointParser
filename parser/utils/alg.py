@@ -48,7 +48,7 @@ def kmeans(x, k):
 
 
 @torch.enable_grad()
-def crf(scores, mask, target=None):
+def crf(scores, mask, target=None, marg=False):
     lens = mask[:, 0].sum(-1)
     total = lens.sum()
     batch_size, seq_len, _ = scores.shape
@@ -60,8 +60,9 @@ def crf(scores, mask, target=None):
     # marginal probs are used for decoding, and can be computed by
     # combining the inside algorithm and autograd mechanism
     # instead of the entire inside-outside process
-    probs, = autograd.grad(logZ, scores, retain_graph=training)
-
+    probs = scores
+    if marg:
+        probs, = autograd.grad(logZ, scores, retain_graph=training)
     if target is None:
         return probs
 

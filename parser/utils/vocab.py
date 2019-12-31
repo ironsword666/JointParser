@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from collections import defaultdict
-from collections.abc import Iterable
 
 
 class Vocab(object):
