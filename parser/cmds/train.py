@@ -25,6 +25,10 @@ class Train(CMD):
                                help='path to dev file')
         subparser.add_argument('--ftest', default='data/ptb/test.pid',
                                help='path to test file')
+        subparser.add_argument('--fembed', default=None,
+                               help='path to pretrained embeddings')
+        subparser.add_argument('--unk', default=None,
+                               help='unk token in pretrained embeddings')
 
         return subparser
 

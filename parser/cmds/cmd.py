@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+from parser.utils import Embedding
 from parser.utils.alg import cky, crf
 from parser.utils.common import bos, eos, pad, unk
 from parser.utils.corpus import Corpus, Treebank
@@ -47,7 +48,11 @@ class CMD(object):
                                        CHART=self.CHART)
 
             train = Corpus.load(args.ftrain, self.fields)
-            self.WORD.build(train, args.min_freq)
+            if args.fembed:
+                embed = Embedding.load(args.fembed, args.unk)
+            else:
+                embed = None
+            self.WORD.build(train, args.min_freq, embed)
             self.FEAT.build(train)
             self.CHART.build(train)
             torch.save(self.fields, args.fields)
