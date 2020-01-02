@@ -45,7 +45,7 @@ class BertEmbedding(nn.Module):
         bert = torch.stack([i.mean(0) for i in bert])
         bert_embed = bert.new_zeros(batch_size, seq_len, self.hidden_size)
         bert_embed = bert_embed.masked_scatter_(mask.unsqueeze(-1), bert)
-        if self.hidden_size != bert_embed.shape[-1]:
+        if hasattr(self, 'projection'):
             bert_embed = self.projection(bert_embed)
 
         return bert_embed
