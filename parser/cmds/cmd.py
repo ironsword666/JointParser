@@ -32,8 +32,10 @@ class CMD(object):
                                       tokenize=list)
             elif args.feat == 'bert':
                 tokenizer = BertTokenizer.from_pretrained(args.bert_model)
-                self.FEAT = BertField('bert', pad='[PAD]',
-                                      bos='[CLS]', eos='[SEP]',
+                self.FEAT = BertField('bert',
+                                      pad=tokenizer.pad_token,
+                                      bos=tokenizer.bos_token,
+                                      eos=tokenizer.eos_token,
                                       tokenize=tokenizer.encode)
             else:
                 self.FEAT = Field('tags', bos=bos, eos=eos)
