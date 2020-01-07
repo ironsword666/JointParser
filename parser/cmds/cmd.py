@@ -34,8 +34,8 @@ class CMD(object):
                 tokenizer = BertTokenizer.from_pretrained(args.bert_model)
                 self.FEAT = BertField('bert',
                                       pad='[PAD]',
-                                      bos='[BOS]',
-                                      eos='[EOS]',
+                                      bos='[CLS]',
+                                      eos='[SEP]',
                                       tokenize=tokenizer.encode)
             else:
                 self.FEAT = Field('tags', bos=bos, eos=eos)
