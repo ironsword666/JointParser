@@ -15,7 +15,7 @@ class Predict(CMD):
         subparser = parser.add_parser(
             name, help='Use a trained model to make predictions.'
         )
-        subparser.add_argument('--fdata', default='data/ptb/test.pid',
+        subparser.add_argument('--fdata', default='data/ctb51/test.pid',
                                help='path to dataset')
         subparser.add_argument('--fpred', default='pred.pid',
                                help='path to predicted result')
@@ -28,7 +28,7 @@ class Predict(CMD):
         print("Load the dataset")
         corpus = Corpus.load(args.fdata, self.fields)
         dataset = TextDataset(corpus,
-                              [self.TREE, self.WORD, self.FEAT],
+                              [self.TREE, self.CHAR],
                               args.buckets)
         # set the data loader
         dataset.loader = batchify(dataset, args.batch_size)

@@ -19,11 +19,11 @@ class Train(CMD):
         subparser = parser.add_parser(
             name, help='Train a model.'
         )
-        subparser.add_argument('--ftrain', default='data/ptb/train.pid',
+        subparser.add_argument('--ftrain', default='data/ctb51/train.pid',
                                help='path to train file')
-        subparser.add_argument('--fdev', default='data/ptb/dev.pid',
+        subparser.add_argument('--fdev', default='data/ctb51/dev.pid',
                                help='path to dev file')
-        subparser.add_argument('--ftest', default='data/ptb/test.pid',
+        subparser.add_argument('--ftest', default='data/ctb51/test.pid',
                                help='path to test file')
         subparser.add_argument('--fembed', default=None,
                                help='path to pretrained embeddings')
@@ -39,9 +39,12 @@ class Train(CMD):
         dev = Corpus.load(args.fdev, self.fields)
         test = Corpus.load(args.ftest, self.fields)
 
-        train = TextDataset(train, self.fields, args.buckets)
-        dev = TextDataset(dev, self.fields, args.buckets)
-        test = TextDataset(test, self.fields, args.buckets)
+        train = TextDataset(
+            train, [self.TREE, self.CHAR, self.CHART], args.buckets)
+        dev = TextDataset(
+            dev, [self.TREE, self.CHAR, self.CHART], args.buckets)
+        test = TextDataset(
+            test, [self.TREE, self.CHAR, self.CHART], args.buckets)
         # set the data loaders
         train.loader = batchify(train, args.batch_size, True)
         dev.loader = batchify(dev, args.batch_size)
@@ -57,7 +60,7 @@ class Train(CMD):
               f"{len(train.buckets)} buckets")
 
         print("Create the model")
-        self.model = Model(args).load_pretrained(self.WORD.embed)
+        self.model = Model(args).load_pretrained(self.CHAR.embed)
         print(f"{self.model}\n")
         self.model = self.model.to(args.device)
         if torch.cuda.device_count() > 1:

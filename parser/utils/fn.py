@@ -89,6 +89,36 @@ def binarize(tree):
     return tree
 
 
+def decompose(tree):
+    tree = tree.copy(True)
+    pos = set(list(zip(*tree.pos()))[1])
+    nodes = [tree]
+    while nodes:
+        node = nodes.pop()
+        if isinstance(node, Tree):
+            nodes.extend([child for child in node])
+            for i, child in enumerate(node):
+                if isinstance(child, Tree) and len(child) == 1 and isinstance(child[0], str):
+                    node[i] = Tree(child.label(), [Tree("CHAR", [char])
+                                                   for char in child[0]])
+
+    return tree, pos
+
+
+def compose(tree):
+    tree = tree.copy(True)
+    nodes = [tree]
+    while nodes:
+        node = nodes.pop()
+        if isinstance(node, Tree):
+            nodes.extend([child for child in node])
+            for i, child in enumerate(node):
+                if isinstance(child, Tree) and any([isinstance(grand[0], str) for grand in child]):
+                    node[i] = Tree(child.label(), ["".join(child.leaves())])
+
+    return tree
+
+
 def factorize(tree, delete_labels=None, equal_labels=None):
     def track(tree, i):
         label = tree.label()

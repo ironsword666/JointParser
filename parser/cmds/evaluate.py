@@ -13,7 +13,7 @@ class Evaluate(CMD):
         subparser = parser.add_parser(
             name, help='Evaluate the specified model and dataset.'
         )
-        subparser.add_argument('--fdata', default='data/ptb/test.pid',
+        subparser.add_argument('--fdata', default='data/ctb51/test.pid',
                                help='path to dataset')
 
         return subparser
@@ -23,7 +23,8 @@ class Evaluate(CMD):
 
         print("Load the dataset")
         corpus = Corpus.load(args.fdata, self.fields)
-        dataset = TextDataset(corpus, self.fields, args.buckets)
+        dataset = TextDataset(
+            corpus, [self.TREE, self.CHAR, self.CHART], args.buckets)
         # set the data loader
         dataset.loader = batchify(dataset, args.batch_size)
         print(f"{len(dataset)} sentences, "

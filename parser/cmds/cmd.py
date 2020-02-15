@@ -5,7 +5,7 @@ from parser.utils import Embedding
 from parser.utils.alg import cky, crf
 from parser.utils.common import bos, eos, pad, unk
 from parser.utils.corpus import Corpus, Treebank
-from parser.utils.field import (BertField, CharField, ChartField, Field,
+from parser.utils.field import (BertField, ChartField, Field,
                                 RawField)
 from parser.utils.fn import build, factorize
 from parser.utils.metric import BracketMetric
@@ -24,29 +24,27 @@ class CMD(object):
         if not os.path.exists(args.fields) or args.preprocess:
             print("Preprocess the data")
             self.TREE = RawField('trees')
-            self.WORD = Field('words', pad=pad, unk=unk,
+            self.CHAR = Field('chars', pad=pad, unk=unk,
                               bos=bos, eos=eos, lower=True)
-            if args.feat == 'char':
-                self.FEAT = CharField('chars', pad=pad, unk=unk,
-                                      bos=bos, eos=eos, fix_len=args.fix_len,
-                                      tokenize=list)
-            elif args.feat == 'bert':
+            self.POS = Field('pos')
+
+            self.FEAT = None
+            self.CHART = ChartField('charts')
+            if args.feat == 'bert':
                 tokenizer = BertTokenizer.from_pretrained(args.bert_model)
                 self.FEAT = BertField('bert',
                                       pad='[PAD]',
                                       bos='[CLS]',
                                       eos='[SEP]',
                                       tokenize=tokenizer.encode)
-            else:
-                self.FEAT = Field('tags', bos=bos, eos=eos)
-            self.CHART = ChartField('charts')
-            if args.feat in ('char', 'bert'):
                 self.fields = Treebank(TREE=self.TREE,
-                                       WORD=(self.WORD, self.FEAT),
+                                       CHAR=(self.CHAR, self.FEAT),
+                                       POS=self.POS,
                                        CHART=self.CHART)
             else:
                 self.fields = Treebank(TREE=self.TREE,
-                                       WORD=self.WORD, POS=self.FEAT,
+                                       CHAR=self.CHAR,
+                                       POS=self.POS,
                                        CHART=self.CHART)
 
             train = Corpus.load(args.ftrain, self.fields)
@@ -54,44 +52,44 @@ class CMD(object):
                 embed = Embedding.load(args.fembed, args.unk)
             else:
                 embed = None
-            self.WORD.build(train, args.min_freq, embed)
-            self.FEAT.build(train)
+            self.CHAR.build(train, args.min_freq, embed)
+            if self.FEAT:
+                self.FEAT.build(train)
             self.CHART.build(train)
+            self.POS.build(train)
             torch.save(self.fields, args.fields)
         else:
             self.fields = torch.load(args.fields)
             self.TREE = self.fields.TREE
-            if args.feat in ('char', 'bert'):
-                self.WORD, self.FEAT = self.fields.WORD
-            else:
-                self.WORD, self.FEAT = self.fields.WORD, self.fields.POS
+            self.CHAR = self.fields.CHAR
+            self.POS = self.fields.POS
             self.CHART = self.fields.CHART
         self.criterion = nn.CrossEntropyLoss()
 
         args.update({
-            'n_words': self.WORD.vocab.n_init,
-            'n_feats': len(self.FEAT.vocab),
+            'n_chars': self.CHAR.vocab.n_init,
             'n_labels': len(self.CHART.vocab),
-            'pad_index': self.WORD.pad_index,
-            'unk_index': self.WORD.unk_index,
-            'bos_index': self.WORD.bos_index,
-            'eos_index': self.WORD.eos_index
+            'n_labels': len(self.POS.vocab),
+            'pad_index': self.CHAR.pad_index,
+            'unk_index': self.CHAR.unk_index,
+            'bos_index': self.CHAR.bos_index,
+            'eos_index': self.CHAR.eos_index
         })
 
         print(f"Override the default configs\n{args}")
-        print(f"{self.TREE}\n{self.WORD}\n{self.FEAT}\n{self.CHART}")
+        print(f"{self.TREE}\n{self.CHAR}\n{self.POS}\n{self.CHART}")
 
     def train(self, loader):
         self.model.train()
 
-        for trees, words, feats, (spans, labels) in loader:
+        for trees, chars, (spans, labels) in loader:
             self.optimizer.zero_grad()
 
-            batch_size, seq_len = words.shape
-            lens = words.ne(self.args.pad_index).sum(1) - 1
+            batch_size, seq_len = chars.shape
+            lens = chars.ne(self.args.pad_index).sum(1) - 1
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
-            s_span, s_label = self.model(words, feats)
+            s_span, s_label = self.model(chars, None)
             loss, _ = self.get_loss(s_span, s_label, spans, labels, mask)
             loss.backward()
             nn.utils.clip_grad_norm_(self.model.parameters(),
@@ -104,14 +102,14 @@ class CMD(object):
         self.model.eval()
 
         total_loss = 0
-        metric = BracketMetric()
+        metric = BracketMetric(self.POS.vocab.stoi.keys())
 
-        for trees, words, feats, (spans, labels) in loader:
-            batch_size, seq_len = words.shape
-            lens = words.ne(self.args.pad_index).sum(1) - 1
+        for trees, chars, (spans, labels) in loader:
+            batch_size, seq_len = chars.shape
+            lens = chars.ne(self.args.pad_index).sum(1) - 1
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
-            s_span, s_label = self.model(words, feats)
+            s_span, s_label = self.model(chars, None)
             loss, s_span = self.get_loss(s_span, s_label, spans, labels, mask)
             preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
@@ -132,12 +130,12 @@ class CMD(object):
         self.model.eval()
 
         all_trees = []
-        for trees, words, feats in loader:
-            batch_size, seq_len = words.shape
-            lens = words.ne(self.args.pad_index).sum(1) - 1
+        for trees, chars in loader:
+            batch_size, seq_len = chars.shape
+            lens = chars.ne(self.args.pad_index).sum(1) - 1
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
-            s_span, s_label = self.model(words, feats)
+            s_span, s_label = self.model(chars, None)
             if self.args.marg:
                 s_span = crf(s_span, mask, marg=True)
             preds = self.decode(s_span, s_label, mask)

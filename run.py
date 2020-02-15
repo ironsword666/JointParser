@@ -21,7 +21,7 @@ if __name__ == '__main__':
         subparser = subcommand.add_subparser(name, subparsers)
         subparser.add_argument('--conf', '-c', default='config.ini',
                                help='path to config file')
-        subparser.add_argument('--file', '-f', default='exp/ptb.char',
+        subparser.add_argument('--file', '-f', default='exp/ctb51.char',
                                help='path to saved files')
         subparser.add_argument('--preprocess', '-p', action='store_true',
                                help='whether to preprocess the data first')
@@ -31,8 +31,8 @@ if __name__ == '__main__':
                                help='seed for generating random numbers')
         subparser.add_argument('--threads', '-t', default=8, type=int,
                                help='max num of threads')
-        subparser.add_argument('--feat', default='char',
-                               choices=['tag', 'char', 'bert'],
+        subparser.add_argument('--feat', default=None,
+                               choices=[None, 'bert'],
                                help='choices of additional features')
         subparser.add_argument('--batch-size', default=5000, type=int,
                                help='batch size')
