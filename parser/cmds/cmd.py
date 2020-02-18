@@ -69,7 +69,7 @@ class CMD(object):
         args.update({
             'n_chars': self.CHAR.vocab.n_init,
             'n_labels': len(self.CHART.vocab),
-            'n_labels': len(self.POS.vocab),
+            'n_pos_labels': len(self.POS.vocab),
             'pad_index': self.CHAR.pad_index,
             'unk_index': self.CHAR.unk_index,
             'bos_index': self.CHAR.bos_index,
