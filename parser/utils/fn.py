@@ -113,7 +113,7 @@ def compose(tree):
         if isinstance(node, Tree):
             nodes.extend([child for child in node])
             for i, child in enumerate(node):
-                if isinstance(child, Tree) and any([isinstance(grand[0], str) for grand in child]):
+                if isinstance(child, Tree) and all([isinstance(grand[0], str) for grand in child]):
                     node[i] = Tree(child.label(), ["".join(child.leaves())])
 
     return tree
