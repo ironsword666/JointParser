@@ -24,7 +24,7 @@ class Evaluate(CMD):
         print("Load the dataset")
         corpus = Corpus.load(args.fdata, self.fields)
         dataset = TextDataset(
-            corpus, [self.TREE, self.CHAR, self.CHART], args.buckets)
+            corpus, self.fields, args.buckets)
         # set the data loader
         dataset.loader = batchify(dataset, args.batch_size)
         print(f"{len(dataset)} sentences, "

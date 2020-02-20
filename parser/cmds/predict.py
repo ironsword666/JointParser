@@ -28,7 +28,7 @@ class Predict(CMD):
         print("Load the dataset")
         corpus = Corpus.load(args.fdata, self.fields)
         dataset = TextDataset(corpus,
-                              [self.TREE, self.CHAR],
+                              self.fields[:-1],
                               args.buckets)
         # set the data loader
         dataset.loader = batchify(dataset, args.batch_size)

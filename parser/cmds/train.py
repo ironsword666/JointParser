@@ -40,11 +40,11 @@ class Train(CMD):
         test = Corpus.load(args.ftest, self.fields)
 
         train = TextDataset(
-            train, [self.TREE, self.CHAR, self.CHART], args.buckets)
+            train, self.fields, args.buckets)
         dev = TextDataset(
-            dev, [self.TREE, self.CHAR, self.CHART], args.buckets)
+            dev, self.fields, args.buckets)
         test = TextDataset(
-            test, [self.TREE, self.CHAR, self.CHART], args.buckets)
+            test, self.fields, args.buckets)
         # set the data loaders
         train.loader = batchify(train, args.batch_size, True)
         dev.loader = batchify(dev, args.batch_size)

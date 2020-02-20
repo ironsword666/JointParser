@@ -32,7 +32,7 @@ if __name__ == '__main__':
         subparser.add_argument('--threads', '-t', default=8, type=int,
                                help='max num of threads')
         subparser.add_argument('--feat', default=None,
-                               choices=[None, 'bert'],
+                               choices=[None, 'bert', 'bigram', 'trigram'],
                                help='choices of additional features')
         subparser.add_argument('--batch-size', default=5000, type=int,
                                help='batch size')
@@ -40,6 +40,8 @@ if __name__ == '__main__':
                                help='max num of buckets to use')
         subparser.add_argument('--marg', action='store_true',
                                help='whether to use marginal probs')
+        subparser.add_argument('--dict-file', default=None,
+                               help='path for dictionary')
     args = parser.parse_args()
 
     print(f"Set the max num of threads to {args.threads}")

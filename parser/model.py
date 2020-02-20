@@ -18,21 +18,25 @@ class Model(nn.Module):
         # the embedding layer
         self.word_embed = nn.Embedding(num_embeddings=args.n_chars,
                                        embedding_dim=args.n_embed)
-        # if args.feat == 'char':
-        #     self.feat_embed = CHAR_LSTM(n_chars=args.n_feats,
-        #                                 n_embed=args.n_char_embed,
-        #                                 n_out=args.n_feat_embed)
-        # elif args.feat == 'bert':
-        #     self.feat_embed = BertEmbedding(model=args.bert_model,
-        #                                     n_layers=args.n_bert_layers,
-        #                                     n_out=args.n_feat_embed)
-        # else:
-        #     self.feat_embed = nn.Embedding(num_embeddings=args.n_feats,
-        #                                    embedding_dim=args.n_feat_embed)
-        self.embed_dropout = SharedDropout(p=args.embed_dropout)
+        n_lstm_input = args.n_embed
+        if args.feat == 'bert':
+            self.feat_embed = BertEmbedding(model=args.bert_model,
+                                            n_layers=args.n_bert_layers,
+                                            n_out=args.n_feat_embed)
+            n_lstm_input += args.n_feat_embed
+        if self.args.feat in {'bigram', 'trigram'}:
+            self.bigram_embed = nn.Embedding(num_embeddings=args.n_bigrams,
+                                             embedding_dim=args.n_embed)
+            n_lstm_input += args.n_embed
+        if self.args.feat == 'trigram':
+            self.trigram_embed = nn.Embedding(num_embeddings=args.n_trigrams,
+                                              embedding_dim=args.n_embed)
+            n_lstm_input += args.n_embed
+
+        self.embed_dropout = IndependentDropout(p=args.embed_dropout)
 
         # the lstm layer
-        self.lstm = BiLSTM(input_size=args.n_embed,
+        self.lstm = BiLSTM(input_size=n_lstm_input,
                            hidden_size=args.n_lstm_hidden,
                            num_layers=args.n_lstm_layers,
                            dropout=args.lstm_dropout)
@@ -70,32 +74,44 @@ class Model(nn.Module):
 
         return self
 
-    def forward(self, words, feats):
-        batch_size, seq_len = words.shape
+    def forward(self, feed_dict):
+        chars = feed_dict["chars"]
+        batch_size, seq_len = chars.shape
         # get the mask and lengths of given batch
-        mask = words.ne(self.pad_index)
+        mask = chars.ne(self.pad_index)
         lens = mask.sum(dim=1)
-        ext_words = words
+        ext_chars = chars
         # set the indices larger than num_embeddings to unk_index
         if hasattr(self, 'pretrained'):
-            ext_mask = words.ge(self.word_embed.num_embeddings)
-            ext_words = words.masked_fill(ext_mask, self.unk_index)
+            ext_mask = chars.ge(self.word_embed.num_embeddings)
+            ext_chars = chars.masked_fill(ext_mask, self.unk_index)
 
         # get outputs from embedding layers
-        word_embed = self.word_embed(ext_words)
-        # if hasattr(self, 'pretrained'):
-        #     word_embed += self.pretrained(words)
-        # if self.args.feat == 'char':
-        #     feat_embed = self.feat_embed(feats[mask])
-        #     feat_embed = pad_sequence(feat_embed.split(lens.tolist()), True)
-        # elif self.args.feat == 'bert':
-        #     feat_embed = self.feat_embed(*feats)
-        # else:
-        #     feat_embed = self.feat_embed(feats)
-        # word_embed, feat_embed = self.embed_dropout(word_embed, feat_embed)
-        # # concatenate the word and feat representations
-        # embed = torch.cat((word_embed, feat_embed), dim=-1)
-        embed = word_embed
+        word_embed = self.word_embed(ext_chars)
+        if hasattr(self, 'pretrained'):
+            word_embed += self.pretrained(chars)
+        if self.args.feat == 'bert':
+            feats = feed_dict["feats"]
+            feat_embed = self.feat_embed(*feats)
+            word_embed, feat_embed = self.embed_dropout(word_embed, feat_embed)
+            embed = torch.cat((word_embed, feat_embed), dim=-1)
+        elif self.args.feat == 'bigram':
+            bigram = feed_dict["bigram"]
+            bigram_embed = self.bigram_embed(bigram[:, 1:])
+            word_embed, bigram_embed = self.embed_dropout(
+                word_embed, bigram_embed)
+            embed = torch.cat((word_embed, bigram_embed), dim=-1)
+        elif self.args.feat == 'trigram':
+            bigram = feed_dict["bigram"]
+            trigram = feed_dict["trigram"]
+            bigram_embed = self.bigram_embed(bigram[:, 1:])
+            trigram_embed = self.trigram_embed(trigram[:, 2:])
+            word_embed, bigram_embed, trigram_embed = self.embed_dropout(
+                word_embed, bigram_embed, trigram_embed)
+            embed = torch.cat(
+                (word_embed, bigram_embed, trigram_embed), dim=-1)
+        else:
+            embed = self.embed_dropout(word_embed)[0]
 
         x = pack_padded_sequence(embed, lens, True, False)
         x, _ = self.lstm(x)
