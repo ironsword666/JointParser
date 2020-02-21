@@ -25,8 +25,8 @@ class Train(CMD):
                                help='path to dev file')
         subparser.add_argument('--ftest', default='data/ctb51/test.pid',
                                help='path to test file')
-        subparser.add_argument('--fembed', default=None,
-                               help='path to pretrained embeddings')
+        subparser.add_argument('--embed', action='store_true',
+                               help='whether to use pretrained embeddings')
         subparser.add_argument('--unk', default=None,
                                help='unk token in pretrained embeddings')
 
@@ -60,7 +60,16 @@ class Train(CMD):
               f"{len(train.buckets)} buckets")
 
         print("Create the model")
-        self.model = Model(args).load_pretrained(self.CHAR.embed)
+        embed = {'embed': self.CHAR.embed}
+        if hasattr(self, 'BIGRAM'):
+            embed.update({
+                'bi_embed': self.BIGRAM.embed,
+            })
+        if hasattr(self, 'TRIGRAM'):
+            embed.update({
+                'tri_embed': self.TRIGRAM.embed,
+            })
+        self.model = Model(args).load_pretrained(embed)
         print(f"{self.model}\n")
         self.model = self.model.to(args.device)
         if torch.cuda.device_count() > 1:

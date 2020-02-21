@@ -15,8 +15,9 @@ class Model(nn.Module):
         super(Model, self).__init__()
 
         self.args = args
+        self.pretrained = False
         # the embedding layer
-        self.word_embed = nn.Embedding(num_embeddings=args.n_chars,
+        self.char_embed = nn.Embedding(num_embeddings=args.n_chars,
                                        embedding_dim=args.n_embed)
         n_lstm_input = args.n_embed
         if args.feat == 'bert':
@@ -67,11 +68,23 @@ class Model(nn.Module):
         self.pad_index = args.pad_index
         self.unk_index = args.unk_index
 
-    def load_pretrained(self, embed=None):
+    def load_pretrained(self, embed_dict=None):
+        embed = embed_dict['embed']
         if embed is not None:
-            self.pretrained = nn.Embedding.from_pretrained(embed)
-            nn.init.zeros_(self.word_embed.weight)
-
+            self.pretrained = True
+            self.char_pretrained = nn.Embedding.from_pretrained(embed)
+            nn.init.zeros_(self.char_embed.weight)
+            if self.args.feat == 'bigram':
+                embed = embed_dict['bi_embed']
+                self.bi_pretrained = nn.Embedding.from_pretrained(embed)
+                nn.init.zeros_(self.bigram_embed.weight)
+            elif self.args.feat == 'trigram':
+                bi_embed = embed_dict['bi_embed']
+                tri_embed = embed_dict['tri_embed']
+                self.bi_pretrained = nn.Embedding.from_pretrained(bi_embed)
+                self.tri_pretrained = nn.Embedding.from_pretrained(tri_embed)
+                nn.init.zeros_(self.bigram_embed.weight)
+                nn.init.zeros_(self.trigram_embed.weight)
         return self
 
     def forward(self, feed_dict):
@@ -82,36 +95,53 @@ class Model(nn.Module):
         lens = mask.sum(dim=1)
         ext_chars = chars
         # set the indices larger than num_embeddings to unk_index
-        if hasattr(self, 'pretrained'):
-            ext_mask = chars.ge(self.word_embed.num_embeddings)
+        if self.pretrained:
+            ext_mask = chars.ge(self.char_embed.num_embeddings)
             ext_chars = chars.masked_fill(ext_mask, self.unk_index)
 
         # get outputs from embedding layers
-        word_embed = self.word_embed(ext_chars)
-        if hasattr(self, 'pretrained'):
-            word_embed += self.pretrained(chars)
+        char_embed = self.char_embed(ext_chars)
+        if self.pretrained:
+            char_embed += self.char_pretrained(chars)
+
         if self.args.feat == 'bert':
             feats = feed_dict["feats"]
             feat_embed = self.feat_embed(*feats)
-            word_embed, feat_embed = self.embed_dropout(word_embed, feat_embed)
-            embed = torch.cat((word_embed, feat_embed), dim=-1)
+            char_embed, feat_embed = self.embed_dropout(char_embed, feat_embed)
+            embed = torch.cat((char_embed, feat_embed), dim=-1)
         elif self.args.feat == 'bigram':
-            bigram = feed_dict["bigram"]
-            bigram_embed = self.bigram_embed(bigram[:, 1:])
-            word_embed, bigram_embed = self.embed_dropout(
-                word_embed, bigram_embed)
-            embed = torch.cat((word_embed, bigram_embed), dim=-1)
+            bigram = feed_dict["bigram"][:, 1:]
+            ext_bigram = bigram
+            if self.pretrained:
+                ext_mask = bigram.ge(self.bigram_embed.num_embeddings)
+                ext_bigram = bigram.masked_fill(ext_mask, self.unk_index)
+            bigram_embed = self.bigram_embed(ext_bigram)
+            if self.pretrained:
+                bigram_embed += self.bi_pretrained(bigram)
+            char_embed, bigram_embed = self.embed_dropout(
+                char_embed, bigram_embed)
+            embed = torch.cat((char_embed, bigram_embed), dim=-1)
         elif self.args.feat == 'trigram':
-            bigram = feed_dict["bigram"]
-            trigram = feed_dict["trigram"]
-            bigram_embed = self.bigram_embed(bigram[:, 1:])
-            trigram_embed = self.trigram_embed(trigram[:, 2:])
-            word_embed, bigram_embed, trigram_embed = self.embed_dropout(
-                word_embed, bigram_embed, trigram_embed)
+            bigram = feed_dict["bigram"][:, 1:]
+            trigram = feed_dict["trigram"][:, 2:]
+            ext_bigram = bigram
+            ext_trigram = trigram
+            if self.pretrained:
+                ext_mask = bigram.ge(self.bigram_embed.num_embeddings)
+                ext_bigram = bigram.masked_fill(ext_mask, self.unk_index)
+                ext_mask = trigram.ge(self.trigram_embed.num_embeddings)
+                ext_trigram = trigram.masked_fill(ext_mask, self.unk_index)
+            bigram_embed = self.bigram_embed(ext_bigram)
+            trigram_embed = self.trigram_embed(ext_trigram)
+            if self.pretrained:
+                bigram_embed += self.bi_pretrained(bigram)
+                trigram_embed += self.tri_pretrained(trigram)
+            char_embed, bigram_embed, trigram_embed = self.embed_dropout(
+                char_embed, bigram_embed, trigram_embed)
             embed = torch.cat(
-                (word_embed, bigram_embed, trigram_embed), dim=-1)
+                (char_embed, bigram_embed, trigram_embed), dim=-1)
         else:
-            embed = self.embed_dropout(word_embed)[0]
+            embed = self.embed_dropout(char_embed)[0]
 
         x = pack_padded_sequence(embed, lens, True, False)
         x, _ = self.lstm(x)

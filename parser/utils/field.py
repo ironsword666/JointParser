@@ -140,7 +140,7 @@ class NGramField(Field):
         n_pad = (self.n - 1)
         for sequence in sequences:
             chars = [self.bos] * n_pad + sequence + [self.eos] * n_pad
-            bichars = [tuple(chars[i + s] for s in range(self.n))
+            bichars = ["".join(chars[i + s] for s in range(self.n))
                        for i in range(len(chars) - n_pad)]
             counter.update(bichars)
         if dict_file is not None:
@@ -158,6 +158,7 @@ class NGramField(Field):
             self.vocab.extend(tokens)
             self.embed = torch.zeros(len(self.vocab), embed.dim)
             self.embed[self.vocab.token2id(tokens)] = embed.vectors
+            self.embed /= torch.std(self.embed)
 
     def read_dict(self, dict_file):
         word_list = dict()
@@ -195,7 +196,7 @@ class NGramField(Field):
         n_pad = (self.n - 1)
         for sent_idx, sequence in enumerate(sequences):
             chars = [self.bos] * n_pad + sequence + [self.eos] * n_pad
-            sequences[sent_idx] = [tuple(chars[i + s] for s in range(self.n))
+            sequences[sent_idx] = ["".join(chars[i + s] for s in range(self.n))
                                    for i in range(len(chars) - n_pad)]
         if self.use_vocab:
             sequences = [self.vocab.token2id(sequence)

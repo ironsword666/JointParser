@@ -118,12 +118,18 @@ class BracketMetric(Metric):
             self.cltp += len(cltp)
             self.pltp += len(pltp)
             self.sltp += len(sltp)
-            self.pred += len(pred)
-            self.gold += len(gold)
-            self.cpred += len(cpred)
-            self.cgold += len(cgold)
-            self.spred += len(spred)
-            self.sgold += len(sgold)
+
+            pred_span_count = len(pred)
+            gold_span_count = len(gold)
+            pred_word_count = len(spred)
+            gold_word_count = len(sgold)
+
+            self.pred += pred_span_count
+            self.gold += gold_span_count
+            self.cpred += pred_span_count - pred_word_count
+            self.cgold += gold_span_count - gold_word_count
+            self.spred += pred_word_count
+            self.sgold += gold_word_count
 
     def __repr__(self):
         s = f"CLP: {self.clp:6.2%} CLR: {self.clr:6.2%} CLF: {self.clf:6.2%} "

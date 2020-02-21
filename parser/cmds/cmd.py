@@ -64,18 +64,25 @@ class CMD(object):
                                        CHART=self.CHART)
 
             train = Corpus.load(args.ftrain, self.fields)
-            if args.fembed:
-                embed = Embedding.load(args.fembed, args.unk)
-            else:
-                embed = None
+            embed = Embedding.load(
+                'data/tencent.char.200.txt',
+                args.unk) if args.embed else None
             self.CHAR.build(train, args.min_freq, embed)
             if hasattr(self, 'FEAT'):
                 self.FEAT.build(train)
             if hasattr(self, 'BIGRAM'):
+                embed = Embedding.load(
+                    'data/tencent.bi.200.txt',
+                    args.unk) if args.embed else None
                 self.BIGRAM.build(train, args.min_freq,
+                                  embed=embed,
                                   dict_file=args.dict_file)
             if hasattr(self, 'TRIGRAM'):
+                embed = Embedding.load(
+                    'data/tencent.tri.200.txt',
+                    args.unk) if args.embed else None
                 self.TRIGRAM.build(train, args.min_freq,
+                                   embed=embed,
                                    dict_file=args.dict_file)
             self.CHART.build(train)
             self.POS.build(train)
