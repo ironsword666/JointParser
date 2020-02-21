@@ -69,7 +69,8 @@ class Model(nn.Module):
         self.unk_index = args.unk_index
 
     def load_pretrained(self, embed_dict=None):
-        embed = embed_dict['embed']
+        embed = embed_dict['embed'] if isinstance(
+            embed_dict, dict) and 'embed' in embed_dict else None
         if embed is not None:
             self.pretrained = True
             self.char_pretrained = nn.Embedding.from_pretrained(embed)
@@ -177,7 +178,13 @@ class Model(nn.Module):
     def save(self, path):
         state_dict, pretrained = self.state_dict(), None
         if hasattr(self, 'pretrained'):
-            pretrained = state_dict.pop('pretrained.weight')
+            pretrained = {'embed': state_dict.pop('char_pretrained.weight')}
+            if hasattr(self, 'bi_pretrained'):
+                pretrained.update(
+                    {'bi_embed': state_dict.pop('bi_pretrained.weight')})
+            if hasattr(self, 'tri_pretrained'):
+                pretrained.update(
+                    {'tri_embed': state_dict.pop('tri_pretrained.weight')})
         state = {
             'args': self.args,
             'state_dict': state_dict,

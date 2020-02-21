@@ -29,7 +29,8 @@ class Train(CMD):
                                help='whether to use pretrained embeddings')
         subparser.add_argument('--unk', default=None,
                                help='unk token in pretrained embeddings')
-
+        subparser.add_argument('--dict-file', default=None,
+                               help='path for dictionary')
         return subparser
 
     def __call__(self, args):

@@ -166,7 +166,7 @@ class NGramField(Field):
             for line in dict_in:
                 line = line.split()
                 if len(line) == 3:
-                    word_list[tuple(line[0])] = 100
+                    word_list[line[0]] = 100
         return Counter(word_list)
 
     def __repr__(self):
