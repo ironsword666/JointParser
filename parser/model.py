@@ -177,7 +177,7 @@ class Model(nn.Module):
 
     def save(self, path):
         state_dict, pretrained = self.state_dict(), None
-        if hasattr(self, 'pretrained'):
+        if self.pretrained:
             pretrained = {'embed': state_dict.pop('char_pretrained.weight')}
             if hasattr(self, 'bi_pretrained'):
                 pretrained.update(
