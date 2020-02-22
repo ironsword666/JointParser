@@ -44,27 +44,9 @@ class Model(nn.Module):
         self.lstm_dropout = SharedDropout(p=args.lstm_dropout)
 
         # the MLP layers
-        self.mlp_span_l = MLP(n_in=args.n_lstm_hidden*2,
-                              n_out=args.n_mlp_span,
-                              dropout=args.mlp_dropout)
-        self.mlp_span_r = MLP(n_in=args.n_lstm_hidden*2,
-                              n_out=args.n_mlp_span,
-                              dropout=args.mlp_dropout)
-        self.mlp_label_l = MLP(n_in=args.n_lstm_hidden*2,
-                               n_out=args.n_mlp_label,
-                               dropout=args.mlp_dropout)
-        self.mlp_label_r = MLP(n_in=args.n_lstm_hidden*2,
-                               n_out=args.n_mlp_label,
-                               dropout=args.mlp_dropout)
+        self.mlp = MLP(n_in=args.n_lstm_hidden*2,
+                       n_out=args.n_labels)
 
-        # the Biaffine layers
-        self.span_attn = Biaffine(n_in=args.n_mlp_span,
-                                  bias_x=True,
-                                  bias_y=False)
-        self.label_attn = Biaffine(n_in=args.n_mlp_label,
-                                   n_out=args.n_labels,
-                                   bias_x=True,
-                                   bias_y=True)
         self.pad_index = args.pad_index
         self.unk_index = args.unk_index
 
@@ -111,7 +93,7 @@ class Model(nn.Module):
             char_embed, feat_embed = self.embed_dropout(char_embed, feat_embed)
             embed = torch.cat((char_embed, feat_embed), dim=-1)
         elif self.args.feat == 'bigram':
-            bigram = feed_dict["bigram"][:, 1:]
+            bigram = feed_dict["bigram"]
             ext_bigram = bigram
             if self.pretrained:
                 ext_mask = bigram.ge(self.bigram_embed.num_embeddings)
@@ -123,8 +105,8 @@ class Model(nn.Module):
                 char_embed, bigram_embed)
             embed = torch.cat((char_embed, bigram_embed), dim=-1)
         elif self.args.feat == 'trigram':
-            bigram = feed_dict["bigram"][:, 1:]
-            trigram = feed_dict["trigram"][:, 2:]
+            bigram = feed_dict["bigram"]
+            trigram = feed_dict["trigram"]
             ext_bigram = bigram
             ext_trigram = trigram
             if self.pretrained:
@@ -148,21 +130,9 @@ class Model(nn.Module):
         x, _ = self.lstm(x)
         x, _ = pad_packed_sequence(x, True, total_length=seq_len)
         x = self.lstm_dropout(x)
+        scores = self.mlp(x)
 
-        x_f, x_b = x.chunk(2, dim=-1)
-        x = torch.cat((x_f[:, :-1], x_b[:, 1:]), -1)
-        # apply MLPs to the BiLSTM output states
-        span_l = self.mlp_span_l(x)
-        span_r = self.mlp_span_r(x)
-        label_l = self.mlp_label_l(x)
-        label_r = self.mlp_label_r(x)
-
-        # [batch_size, seq_len, seq_len]
-        s_span = self.span_attn(span_l, span_r)
-        # [batch_size, seq_len, seq_len, n_labels]
-        s_label = self.label_attn(label_l, label_r).permute(0, 2, 3, 1)
-
-        return s_span, s_label
+        return scores
 
     @classmethod
     def load(cls, path):

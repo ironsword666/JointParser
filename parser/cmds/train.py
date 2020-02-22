@@ -19,11 +19,11 @@ class Train(CMD):
         subparser = parser.add_parser(
             name, help='Train a model.'
         )
-        subparser.add_argument('--ftrain', default='data/ctb51/train.pid',
+        subparser.add_argument('--ftrain', default='data/ctb51/train.conll',
                                help='path to train file')
-        subparser.add_argument('--fdev', default='data/ctb51/dev.pid',
+        subparser.add_argument('--fdev', default='data/ctb51/dev.conll',
                                help='path to dev file')
-        subparser.add_argument('--ftest', default='data/ctb51/test.pid',
+        subparser.add_argument('--ftest', default='data/ctb51/test.conll',
                                help='path to test file')
         subparser.add_argument('--embed', action='store_true',
                                help='whether to use pretrained embeddings')
@@ -40,12 +40,9 @@ class Train(CMD):
         dev = Corpus.load(args.fdev, self.fields)
         test = Corpus.load(args.ftest, self.fields)
 
-        train = TextDataset(
-            train, self.fields, args.buckets)
-        dev = TextDataset(
-            dev, self.fields, args.buckets)
-        test = TextDataset(
-            test, self.fields, args.buckets)
+        train = TextDataset(train, self.fields, args.buckets)
+        dev = TextDataset(dev, self.fields, args.buckets)
+        test = TextDataset(test, self.fields, args.buckets)
         # set the data loaders
         train.loader = batchify(train, args.batch_size, True)
         dev.loader = batchify(dev, args.batch_size)
@@ -88,7 +85,6 @@ class Train(CMD):
         for epoch in range(1, args.epochs + 1):
             start = datetime.now()
             self.train(train.loader)
-
             print(f"Epoch {epoch} / {args.epochs}:")
             loss, dev_metric = self.evaluate(dev.loader)
             print(f"{'dev:':6} Loss: {loss:.4f} {dev_metric}")

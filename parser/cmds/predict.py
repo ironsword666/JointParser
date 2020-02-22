@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
+
+import torch
+
 from parser import Model
 from parser.cmds.cmd import CMD
 from parser.utils.corpus import Corpus
 from parser.utils.data import TextDataset, batchify
-
-import torch
 
 
 class Predict(CMD):
@@ -15,9 +16,9 @@ class Predict(CMD):
         subparser = parser.add_parser(
             name, help='Use a trained model to make predictions.'
         )
-        subparser.add_argument('--fdata', default='data/ctb51/test.pid',
+        subparser.add_argument('--fdata', default='data/ctb51/test.conll',
                                help='path to dataset')
-        subparser.add_argument('--fpred', default='pred.pid',
+        subparser.add_argument('--fpred', default='pred.conll',
                                help='path to predicted result')
 
         return subparser
@@ -41,13 +42,13 @@ class Predict(CMD):
 
         print("Make predictions on the dataset")
         start = datetime.now()
-        pred_trees = self.predict(dataset.loader)
+        pred_labels = self.predict(dataset.loader)
         total_time = datetime.now() - start
         # restore the order of sentences in the buckets
         indices = torch.tensor([i
                                 for bucket in dataset.buckets.values()
                                 for i in bucket]).argsort()
-        corpus.trees = [pred_trees[i] for i in indices]
+        corpus.labels = [pred_labels[i] for i in indices]
         print(f"Save the predicted result to {args.fpred}")
         corpus.save(args.fpred)
         print(f"{total_time}s elapsed, "

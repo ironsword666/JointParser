@@ -3,39 +3,38 @@
 from collections import namedtuple
 from collections.abc import Iterable
 from parser.utils.field import Field
-from parser.utils.fn import binarize, factorize, decompose, compose
 
-from nltk.tree import Tree
 
-Treebank = namedtuple(typename='Treebank',
-                      field_names=['TREE', 'CHAR', 'POS', 'CHART'],
-                      defaults=[None]*4)
+CoNLL = namedtuple(typename='CoNLL',
+                   field_names=['CHAR', 'LABEL'],
+                   defaults=[None]*2)
 
 
 class Sentence(object):
 
-    def __init__(self, fields, tree, pos):
-        self.tree = tree
-        self.fields = [field if isinstance(field, Iterable) else [field]
-                       for field in fields]
-        self.values = [tree, tree.leaves(), pos, factorize(binarize(tree)[0])]
-        for field, value in zip(self.fields, self.values):
-            for f in field:
-                setattr(self, f.name, value)
+    def __init__(self, fields, values):
+        for field, value in zip(fields, values):
+            if isinstance(field, Iterable):
+                for j in range(len(field)):
+                    setattr(self, field[j].name, value)
+            else:
+                setattr(self, field.name, value)
+        self.fields = fields
+
+    @property
+    def values(self):
+        for field in self.fields:
+            if isinstance(field, Iterable):
+                yield getattr(self, field[0].name)
+            else:
+                yield getattr(self, field.name)
 
     def __len__(self):
-        return len(list(self.tree.leaves()))
+        return len(next(iter(self.values)))
 
     def __repr__(self):
-        return compose(self.tree).pformat(1000000)
-
-    def __setattr__(self, name, value):
-        if isinstance(value, Tree) and hasattr(self, name):
-            tree = getattr(self, name)
-            tree.clear()
-            tree.extend([value[0]])
-        else:
-            self.__dict__[name] = value
+        return '\n'.join('\t'.join(map(str, line))
+                         for line in zip(*self.values)) + '\n'
 
 
 class Corpus(object):
@@ -70,12 +69,16 @@ class Corpus(object):
 
     @classmethod
     def load(cls, path, fields):
+        start, sentences = 0, []
         fields = [field if field is not None else Field(str(i))
                   for i, field in enumerate(fields)]
         with open(path, 'r') as f:
-            trees = [decompose(Tree.fromstring(string)) for string in f]
-        sentences = [Sentence(fields, tree, pos) for tree, pos in trees
-                     if not len(tree) == 1 or isinstance(tree[0][0], Tree)]
+            lines = [line.strip() for line in f]
+        for i, line in enumerate(lines):
+            if not line:
+                values = list(zip(*[l.split('\t') for l in lines[start:i]]))
+                sentences.append(Sentence(fields, values))
+                start = i + 1
 
         return cls(fields, sentences)
 

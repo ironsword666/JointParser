@@ -132,3 +132,32 @@ def cky(scores, mask):
              for i, length in enumerate(lens.tolist())]
 
     return trees
+
+
+def viterbi(trans, emit, mask):
+    strans, etrans, trans = trans
+    emit, mask = emit.transpose(0, 1), mask.t()
+    seq_len, batch_size, n_labels = emit.shape
+    lens = mask.sum(0)
+    delta = emit.new_zeros(seq_len, batch_size, n_labels)
+    paths = emit.new_zeros(seq_len, batch_size, n_labels, dtype=torch.long)
+
+    delta[0] = strans + emit[0]  # [batch_size, n_labels]
+
+    for i in range(1, seq_len):
+        scores = trans + delta[i - 1].unsqueeze(-1)
+        scores, paths[i] = scores.max(1)
+        delta[i] = scores + emit[i]
+
+    preds = []
+    for i, length in enumerate(lens):
+        prev = torch.argmax(delta[length - 1, i] + etrans)
+
+        predict = [prev]
+        for j in reversed(range(1, length)):
+            prev = paths[j, i, prev]
+            predict.append(prev)
+        # flip the predicted sequence before appending it to the list
+        preds.append(paths.new_tensor(predict).flip(0))
+
+    return preds

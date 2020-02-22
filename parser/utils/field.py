@@ -3,6 +3,7 @@
 from collections import Counter
 from parser.utils.vocab import Vocab
 from parser.utils.fn import tohalfwidth
+from parser.utils.common import bos, eos
 import torch
 
 
@@ -137,9 +138,9 @@ class NGramField(Field):
         sequences = getattr(corpus, self.name)
         counter = Counter()
         sequences = [self.preprocess(sequence) for sequence in sequences]
-        n_pad = (self.n - 1)
+        n_pad = self.n - 1
         for sequence in sequences:
-            chars = [self.bos] * n_pad + sequence + [self.eos] * n_pad
+            chars = list(sequence) + [eos] * n_pad
             bichars = ["".join(chars[i + s] for s in range(self.n))
                        for i in range(len(chars) - n_pad)]
             counter.update(bichars)
@@ -195,7 +196,7 @@ class NGramField(Field):
         sequences = [self.preprocess(sequence) for sequence in sequences]
         n_pad = (self.n - 1)
         for sent_idx, sequence in enumerate(sequences):
-            chars = [self.bos] * n_pad + sequence + [self.eos] * n_pad
+            chars = list(sequence) + [eos] * n_pad
             sequences[sent_idx] = ["".join(chars[i + s] for s in range(self.n))
                                    for i in range(len(chars) - n_pad)]
         if self.use_vocab:
@@ -208,33 +209,6 @@ class NGramField(Field):
         sequences = [torch.tensor(sequence) for sequence in sequences]
 
         return sequences
-
-
-class ChartField(Field):
-
-    def build(self, corpus, min_freq=1):
-        sequences = getattr(corpus, self.name)
-        counter = Counter(label
-                          for sequence in sequences
-                          for i, j, label in self.preprocess(sequence))
-
-        self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
-
-    def transform(self, sequences):
-        sequences = [self.preprocess(sequence) for sequence in sequences]
-        spans, labels = [], []
-
-        for sequence in sequences:
-            seq_len = sequence[0][1] + 1
-            span_chart = torch.full((seq_len, seq_len), self.pad_index).bool()
-            label_chart = torch.full((seq_len, seq_len), self.pad_index).long()
-            for i, j, label in sequence:
-                span_chart[i, j] = 1
-                label_chart[i, j] = self.vocab[label]
-            spans.append(span_chart)
-            labels.append(label_chart)
-
-        return list(zip(spans, labels))
 
 
 class BertField(Field):
