@@ -25,7 +25,7 @@ class CMD(object):
             print("Preprocess the data")
             self.TREE = RawField('trees')
             self.CHAR = Field('chars', pad=pad, unk=unk,
-                              bos=bos, eos=eos, lower=True, tohalfwidth=True)
+                              bos=bos, eos=eos, lower=True)
             self.POS = Field('pos')
 
             self.CHART = ChartField('charts')
@@ -42,16 +42,16 @@ class CMD(object):
                                        CHART=self.CHART)
             elif args.feat == 'bigram':
                 self.BIGRAM = NGramField('bichar', n=2, pad=pad, unk=unk,
-                                         bos=bos, eos=eos, lower=True, tohalfwidth=True)
+                                         bos=bos, eos=eos, lower=True)
                 self.fields = Treebank(TREE=self.TREE,
                                        CHAR=(self.CHAR, self.BIGRAM),
                                        POS=self.POS,
                                        CHART=self.CHART)
             elif args.feat == 'trigram':
                 self.BIGRAM = NGramField('bichar', n=2, pad=pad, unk=unk,
-                                         bos=bos, eos=eos, lower=True, tohalfwidth=True)
+                                         bos=bos, eos=eos, lower=True)
                 self.TRIGRAM = NGramField('trichar', n=3, pad=pad, unk=unk,
-                                          bos=bos, eos=eos, lower=True, tohalfwidth=True)
+                                          bos=bos, eos=eos, lower=True)
                 self.fields = Treebank(TREE=self.TREE,
                                        CHAR=(self.CHAR, self.BIGRAM,
                                              self.TRIGRAM),

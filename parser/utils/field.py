@@ -139,7 +139,7 @@ class NGramField(Field):
         sequences = [self.preprocess(sequence) for sequence in sequences]
         n_pad = (self.n - 1)
         for sequence in sequences:
-            chars = [self.bos] * n_pad + sequence + [self.eos] * n_pad
+            chars = sequence + [self.eos] * n_pad
             bichars = ["".join(chars[i + s] for s in range(self.n))
                        for i in range(len(chars) - n_pad)]
             counter.update(bichars)
@@ -195,7 +195,7 @@ class NGramField(Field):
         sequences = [self.preprocess(sequence) for sequence in sequences]
         n_pad = (self.n - 1)
         for sent_idx, sequence in enumerate(sequences):
-            chars = [self.bos] * n_pad + sequence + [self.eos] * n_pad
+            chars = sequence + [self.eos] * n_pad
             sequences[sent_idx] = ["".join(chars[i + s] for s in range(self.n))
                                    for i in range(len(chars) - n_pad)]
         if self.use_vocab:

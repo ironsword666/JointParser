@@ -111,7 +111,7 @@ class Model(nn.Module):
             char_embed, feat_embed = self.embed_dropout(char_embed, feat_embed)
             embed = torch.cat((char_embed, feat_embed), dim=-1)
         elif self.args.feat == 'bigram':
-            bigram = feed_dict["bigram"][:, 1:]
+            bigram = feed_dict["bigram"]
             ext_bigram = bigram
             if self.pretrained:
                 ext_mask = bigram.ge(self.bigram_embed.num_embeddings)
@@ -123,8 +123,8 @@ class Model(nn.Module):
                 char_embed, bigram_embed)
             embed = torch.cat((char_embed, bigram_embed), dim=-1)
         elif self.args.feat == 'trigram':
-            bigram = feed_dict["bigram"][:, 1:]
-            trigram = feed_dict["trigram"][:, 2:]
+            bigram = feed_dict["bigram"]
+            trigram = feed_dict["trigram"]
             ext_bigram = bigram
             ext_trigram = trigram
             if self.pretrained:
