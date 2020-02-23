@@ -19,11 +19,11 @@ class Train(CMD):
         subparser = parser.add_parser(
             name, help='Train a model.'
         )
-        subparser.add_argument('--ftrain', default='data/ptb/train.pid',
+        subparser.add_argument('--ftrain', default='data/ctb51/train.pid',
                                help='path to train file')
-        subparser.add_argument('--fdev', default='data/ptb/dev.pid',
+        subparser.add_argument('--fdev', default='data/ctb51/dev.pid',
                                help='path to dev file')
-        subparser.add_argument('--ftest', default='data/ptb/test.pid',
+        subparser.add_argument('--ftest', default='data/ctb51/test.pid',
                                help='path to test file')
         subparser.add_argument('--fembed', default=None,
                                help='path to pretrained embeddings')

@@ -13,7 +13,7 @@ class Evaluate(CMD):
         subparser = parser.add_parser(
             name, help='Evaluate the specified model and dataset.'
         )
-        subparser.add_argument('--fdata', default='data/ptb/test.pid',
+        subparser.add_argument('--fdata', default='data/ctb51/test.pid',
                                help='path to dataset')
 
         return subparser

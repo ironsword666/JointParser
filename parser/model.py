@@ -18,21 +18,21 @@ class Model(nn.Module):
         # the embedding layer
         self.word_embed = nn.Embedding(num_embeddings=args.n_words,
                                        embedding_dim=args.n_embed)
-        if args.feat == 'char':
-            self.feat_embed = CHAR_LSTM(n_chars=args.n_feats,
-                                        n_embed=args.n_char_embed,
-                                        n_out=args.n_feat_embed)
-        elif args.feat == 'bert':
-            self.feat_embed = BertEmbedding(model=args.bert_model,
-                                            n_layers=args.n_bert_layers,
-                                            n_out=args.n_feat_embed)
-        else:
-            self.feat_embed = nn.Embedding(num_embeddings=args.n_feats,
-                                           embedding_dim=args.n_feat_embed)
+        # if args.feat == 'char':
+        #     self.feat_embed = CHAR_LSTM(n_chars=args.n_feats,
+        #                                 n_embed=args.n_char_embed,
+        #                                 n_out=args.n_feat_embed)
+        # elif args.feat == 'bert':
+        #     self.feat_embed = BertEmbedding(model=args.bert_model,
+        #                                     n_layers=args.n_bert_layers,
+        #                                     n_out=args.n_feat_embed)
+        # else:
+        #     self.feat_embed = nn.Embedding(num_embeddings=args.n_feats,
+        #                                    embedding_dim=args.n_feat_embed)
         self.embed_dropout = IndependentDropout(p=args.embed_dropout)
 
         # the lstm layer
-        self.lstm = BiLSTM(input_size=args.n_embed+args.n_feat_embed,
+        self.lstm = BiLSTM(input_size=args.n_embed,
                            hidden_size=args.n_lstm_hidden,
                            num_layers=args.n_lstm_layers,
                            dropout=args.lstm_dropout)
@@ -83,18 +83,20 @@ class Model(nn.Module):
 
         # get outputs from embedding layers
         word_embed = self.word_embed(ext_words)
-        if hasattr(self, 'pretrained'):
-            word_embed += self.pretrained(words)
-        if self.args.feat == 'char':
-            feat_embed = self.feat_embed(feats[mask])
-            feat_embed = pad_sequence(feat_embed.split(lens.tolist()), True)
-        elif self.args.feat == 'bert':
-            feat_embed = self.feat_embed(*feats)
-        else:
-            feat_embed = self.feat_embed(feats)
-        word_embed, feat_embed = self.embed_dropout(word_embed, feat_embed)
+        # if hasattr(self, 'pretrained'):
+        #     word_embed += self.pretrained(words)
+        # if self.args.feat == 'char':
+        #     feat_embed = self.feat_embed(feats[mask])
+        #     feat_embed = pad_sequence(feat_embed.split(lens.tolist()), True)
+        # elif self.args.feat == 'bert':
+        #     feat_embed = self.feat_embed(*feats)
+        # else:
+        #     feat_embed = self.feat_embed(feats)
+        # word_embed, feat_embed = self.embed_dropout(word_embed, feat_embed)
         # concatenate the word and feat representations
-        embed = torch.cat((word_embed, feat_embed), dim=-1)
+        # embed = torch.cat((word_embed, feat_embed), dim=-1)
+
+        embed = self.embed_dropout(word_embed)[0]
 
         x = pack_padded_sequence(embed, lens, True, False)
         x, _ = self.lstm(x)

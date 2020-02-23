@@ -3,6 +3,8 @@ data
 
 # ignore bash scripts
 *.sh
+*.png
+*.pid
 
 # ignore intermediate files
 *.c

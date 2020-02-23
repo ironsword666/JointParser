@@ -15,7 +15,7 @@ class Predict(CMD):
         subparser = parser.add_parser(
             name, help='Use a trained model to make predictions.'
         )
-        subparser.add_argument('--fdata', default='data/ptb/test.pid',
+        subparser.add_argument('--fdata', default='data/ctb51/test.pid',
                                help='path to dataset')
         subparser.add_argument('--fpred', default='pred.pid',
                                help='path to predicted result')
