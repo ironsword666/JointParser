@@ -35,7 +35,7 @@ class CMD(object):
                                       bos='[CLS]',
                                       eos='[SEP]',
                                       tokenize=tokenizer.encode)
-            self.LABEL = Field('label')
+            self.LABEL = Field('labels')
             self.fields = Treebank(WORD=(self.WORD, self.FEAT),
                                    LABEL=self.LABEL)
 

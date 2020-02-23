@@ -27,8 +27,9 @@ class Sentence(object):
         return len(list(self.tree.leaves()))
 
     def __repr__(self):
+        values = [self.values[0], self.labels]
         return '\n'.join('\t'.join(map(str, line))
-                         for line in zip(*self.values)) + '\n'
+                         for line in zip(*values)) + '\n'
 
     def __setattr__(self, name, value):
         if isinstance(value, Tree) and hasattr(self, name):
