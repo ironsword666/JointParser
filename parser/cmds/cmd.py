@@ -23,7 +23,7 @@ class CMD(object):
         if not os.path.exists(args.fields) or args.preprocess:
             print("Preprocess the data")
             self.CHAR = Field('chars', pad=pad, unk=unk,
-                              lower=True, tohalfwidth=True)
+                              lower=True)
             self.LABEL = Field('labels')
 
             if args.feat == 'bert':
@@ -37,14 +37,14 @@ class CMD(object):
                                     LABEL=self.LABEL)
             elif args.feat == 'bigram':
                 self.BIGRAM = NGramField(
-                    'bichar', n=2, pad=pad, unk=unk, lower=True, tohalfwidth=True)
+                    'bichar', n=2, pad=pad, unk=unk, lower=True)
                 self.fields = CoNLL(CHAR=(self.CHAR, self.BIGRAM),
                                     LABEL=self.LABEL)
             elif args.feat == 'trigram':
                 self.BIGRAM = NGramField(
-                    'bichar', n=2, pad=pad, unk=unk, lower=True, tohalfwidth=True)
+                    'bichar', n=2, pad=pad, unk=unk, lower=True)
                 self.TRIGRAM = NGramField(
-                    'trichar', n=3, pad=pad, unk=unk, lower=True, tohalfwidth=True)
+                    'trichar', n=3, pad=pad, unk=unk, lower=True)
                 self.fields = CoNLL(CHAR=(self.CHAR,
                                           self.BIGRAM,
                                           self.TRIGRAM),
