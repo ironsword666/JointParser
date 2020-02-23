@@ -8,8 +8,8 @@ from parser.utils.fn import binarize, factorize
 from nltk.tree import Tree
 
 Treebank = namedtuple(typename='Treebank',
-                      field_names=['TREE', 'WORD', 'POS', 'CHART'],
-                      defaults=[None]*4)
+                      field_names=['WORD', 'LABEL'],
+                      defaults=[None]*2)
 
 
 class Sentence(object):
@@ -18,7 +18,7 @@ class Sentence(object):
         self.tree = tree
         self.fields = [field if isinstance(field, Iterable) else [field]
                        for field in fields]
-        self.values = [tree, *zip(*tree.pos()), factorize(binarize(tree)[0])]
+        self.values = [*zip(*tree.pos())]
         for field, value in zip(self.fields, self.values):
             for f in field:
                 setattr(self, f.name, value)
@@ -27,7 +27,8 @@ class Sentence(object):
         return len(list(self.tree.leaves()))
 
     def __repr__(self):
-        return self.tree.pformat(1000000)
+        return '\n'.join('\t'.join(map(str, line))
+                         for line in zip(*self.values)) + '\n'
 
     def __setattr__(self, name, value):
         if isinstance(value, Tree) and hasattr(self, name):

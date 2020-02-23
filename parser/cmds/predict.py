@@ -28,7 +28,7 @@ class Predict(CMD):
         print("Load the dataset")
         corpus = Corpus.load(args.fdata, self.fields)
         dataset = TextDataset(corpus,
-                              [self.TREE, self.WORD, self.FEAT],
+                              [self.WORD, self.FEAT],
                               args.buckets)
         # set the data loader
         dataset.loader = batchify(dataset, args.batch_size)
@@ -41,13 +41,13 @@ class Predict(CMD):
 
         print("Make predictions on the dataset")
         start = datetime.now()
-        pred_trees = self.predict(dataset.loader)
+        pred_labels = self.predict(dataset.loader)
         total_time = datetime.now() - start
         # restore the order of sentences in the buckets
         indices = torch.tensor([i
                                 for bucket in dataset.buckets.values()
                                 for i in bucket]).argsort()
-        corpus.trees = [pred_trees[i] for i in indices]
+        corpus.labels = [pred_labels[i] for i in indices]
         print(f"Save the predicted result to {args.fpred}")
         corpus.save(args.fpred)
         print(f"{total_time}s elapsed, "
