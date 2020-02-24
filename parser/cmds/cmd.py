@@ -195,17 +195,17 @@ class CMD(object):
         all_labels = []
         for data in loader:
             if self.args.feat == 'bert':
-                trees, chars, feats, pos = data
+                chars, feats = data
                 feed_dict = {"chars": chars, "feats": feats}
             elif self.args.feat == 'bigram':
-                trees, chars, bigram, pos = data
+                chars, bigram = data
                 feed_dict = {"chars": chars, "bigram": bigram}
             elif self.args.feat == 'trigram':
-                trees, chars, bigram, trigram, pos = data
+                chars, bigram, trigram = data
                 feed_dict = {"chars": chars,
                              "bigram": bigram, "trigram": trigram}
             else:
-                trees, chars, pos = data
+                chars, labels = data
                 feed_dict = {"chars": chars}
             mask = chars.ne(self.args.pad_index)
             scores = self.model(feed_dict)

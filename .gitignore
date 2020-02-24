@@ -3,8 +3,6 @@ data
 
 # ignore bash scripts
 *.sh
-*.png
-*.pid
 
 # ignore intermediate files
 *.c
@@ -14,6 +12,9 @@ build
 
 # ignore hidden files
 .*
+*.pos
+*.png
+*.pid
 
 # ignore experimental results
 exp
