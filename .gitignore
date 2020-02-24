@@ -5,6 +5,7 @@ data
 *.sh
 *.png
 *.pid
+*.pos
 
 # ignore intermediate files
 *.c

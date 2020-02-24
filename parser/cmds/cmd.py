@@ -40,14 +40,9 @@ class CMD(object):
             else:
                 self.FEAT = Field('tags', bos=bos, eos=eos)
             self.CHART = ChartField('charts')
-            if args.feat in ('char', 'bert'):
-                self.fields = Treebank(TREE=self.TREE,
-                                       WORD=(self.WORD, self.FEAT),
-                                       CHART=self.CHART)
-            else:
-                self.fields = Treebank(TREE=self.TREE,
-                                       WORD=self.WORD, POS=self.FEAT,
-                                       CHART=self.CHART)
+            self.fields = Treebank(TREE=self.TREE,
+                                   WORD=(self.WORD, self.FEAT),
+                                   CHART=self.CHART)
 
             train = Corpus.load(args.ftrain, self.fields)
             if args.fembed:
@@ -61,10 +56,7 @@ class CMD(object):
         else:
             self.fields = torch.load(args.fields)
             self.TREE = self.fields.TREE
-            if args.feat in ('char', 'bert'):
-                self.WORD, self.FEAT = self.fields.WORD
-            else:
-                self.WORD, self.FEAT = self.fields.WORD, self.fields.POS
+            self.WORD, self.FEAT = self.fields.WORD
             self.CHART = self.fields.CHART
         self.criterion = nn.CrossEntropyLoss()
 
