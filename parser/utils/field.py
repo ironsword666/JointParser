@@ -217,8 +217,23 @@ class ChartField(Field):
         counter = Counter(label
                           for sequence in sequences
                           for i, j, label in self.preprocess(sequence))
+        meta_labels = Counter()
+        for label, freq in counter.items():
+            if freq < min_freq:
+                meta_labels.update({label.split("+")[-1]: min_freq})
+        counter |= meta_labels
+        self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
 
-        self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index)
+    def get_label_index(self, label):
+        if label in self.vocab:
+            return self.vocab[label]
+        else:
+            label_set = set(label.split("+")[:-1])
+            last_state = label.split("+")[-1]
+            for l_set, whole_l, last_l in self.vocab.sorted_label:
+                if last_state == last_l and len(l_set - label_set) <= 0:
+                    return self.vocab[whole_l]
+            return self.vocab[last_state]
 
     def transform(self, sequences):
         sequences = [self.preprocess(sequence) for sequence in sequences]
@@ -230,10 +245,9 @@ class ChartField(Field):
             label_chart = torch.full((seq_len, seq_len), self.pad_index).long()
             for i, j, label in sequence:
                 span_chart[i, j] = 1
-                label_chart[i, j] = self.vocab[label]
+                label_chart[i, j] = self.get_label_index(label)
             spans.append(span_chart)
             labels.append(label_chart)
-
         return list(zip(spans, labels))
 
 

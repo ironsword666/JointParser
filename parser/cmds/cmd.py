@@ -28,7 +28,7 @@ class CMD(object):
                               bos=bos, eos=eos, lower=True)
             self.POS = Field('pos')
 
-            self.CHART = ChartField('charts')
+            self.CHART = ChartField('charts', unk=unk)
             if args.feat == 'bert':
                 tokenizer = BertTokenizer.from_pretrained(args.bert_model)
                 self.FEAT = BertField('bert',
@@ -84,7 +84,7 @@ class CMD(object):
                 self.TRIGRAM.build(train, args.min_freq,
                                    embed=embed,
                                    dict_file=args.dict_file)
-            self.CHART.build(train)
+            self.CHART.build(train, 10)
             self.POS.build(train)
             torch.save(self.fields, args.fields)
         else:
@@ -100,7 +100,7 @@ class CMD(object):
                 self.CHAR = self.fields.CHAR
             self.POS = self.fields.POS
             self.CHART = self.fields.CHART
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = nn.CrossEntropyLoss(ignore_index=0)
 
         args.update({
             'n_chars': self.CHAR.vocab.n_init,
@@ -251,7 +251,7 @@ class CMD(object):
 
     def decode(self, s_span, s_label, mask):
         pred_spans = cky(s_span, mask)
-        pred_labels = s_label.argmax(-1).tolist()
+        pred_labels = (1 + s_label[..., 1:].argmax(-1)).tolist()
         preds = [[(i, j, labels[i][j]) for i, j in spans]
                  for spans, labels in zip(pred_spans, pred_labels)]
 

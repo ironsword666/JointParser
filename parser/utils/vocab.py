@@ -5,10 +5,12 @@ from collections import defaultdict
 
 class Vocab(object):
 
-    def __init__(self, counter, min_freq=1, specials=[], unk_index=0):
+    def __init__(self, counter, min_freq=1, specials=[], unk_index=0, keep_sorted_label=False):
         self.itos = specials
         self.stoi = defaultdict(lambda: unk_index)
         self.stoi.update({token: i for i, token in enumerate(self.itos)})
+        if keep_sorted_label:
+            self.sorted_label = list(reversed([(set(label.split("+")[:-1]), label, label.split("+")[-1]) for label, freq in counter.most_common() if len(label.split("+")) > 1 and freq >= min_freq]))
         self.extend([token for token, freq in counter.items()
                      if freq >= min_freq])
         self.unk_index = unk_index
