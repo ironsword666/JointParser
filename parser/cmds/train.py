@@ -79,8 +79,9 @@ class Train(CMD):
                               args.lr,
                               (args.mu, args.nu),
                               args.epsilon)
+        decay_steps = args.decay_epochs * len(train.loader)
         self.scheduler = ExponentialLR(self.optimizer,
-                                       args.decay**(1/args.decay_steps))
+                                       args.decay**(1/decay_steps))
 
         total_time = timedelta()
         best_e, best_metric = 1, Metric()

@@ -217,10 +217,8 @@ class ChartField(Field):
         counter = Counter(label
                           for sequence in sequences
                           for i, j, label in self.preprocess(sequence))
-        meta_labels = Counter()
-        for label, freq in counter.items():
-            if freq < min_freq:
-                meta_labels.update({label.split("+")[-1]: min_freq})
+        meta_labels = Counter({label.split(
+            "+")[-1]: min_freq for label, freq in counter.items() if freq < min_freq})
         counter |= meta_labels
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
 
