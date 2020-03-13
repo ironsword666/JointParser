@@ -108,7 +108,7 @@ class Train(CMD):
             else:
                 print(f"{t}s elapsed\n")
             total_time += t
-            if epoch - best_e >= args.patience:
+            if epoch - best_e >= args.patience and epoch >= args.min_training_epoch:
                 break
         self.model = Model.load(args.model)
         loss, metric = self.evaluate(test.loader)
