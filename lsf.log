@@ -1,0 +1,142 @@
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@r1cmpsrvs79-14ig0602>
+Subject: Job 16833: <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:mode=exclusive_process;#BSUB -o lsf.log; data=ctb7;suffix=.cluster.bert; python -u run.py train -p -d=0 --marg --feat=bert --ftrain=data/$data/train.pid --fdev=data/$data/dev.pid --ftest=data/$data/test.pid -f=exp/$data.bigram$suffix > results/$data.bigram$suffix 2>&1> in cluster <sisdc01> Exited
+
+Job <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:mode=exclusive_process;#BSUB -o lsf.log; data=ctb7;suffix=.cluster.bert; python -u run.py train -p -d=0 --marg --feat=bert --ftrain=data/$data/train.pid --fdev=data/$data/dev.pid --ftest=data/$data/test.pid -f=exp/$data.bigram$suffix > results/$data.bigram$suffix 2>&1> was submitted from host <vm-10-239-71-153> by user <zhli-suda> in cluster <sisdc01> at Thu Mar 19 16:06:40 2020
+Job was executed on host(s) <4*r1cmpsrvs79-14ig0602>, in queue <HPC.S1.GPU.X795.sha>, as user <zhli-suda> in cluster <sisdc01> at Thu Mar 19 16:07:32 2020
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda> was used as the home directory.
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda/hqzhou/spw-parser> was used as the working directory.
+Started at Thu Mar 19 16:07:32 2020
+Terminated at Thu Mar 19 16:09:40 2020
+Results reported at Thu Mar 19 16:09:40 2020
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -q HPC.S1.GPU.X795.sha
+#BSUB -n 4
+#BSUB -gpu num=1:mode=exclusive_process
+#BSUB -o lsf.log
+
+data=ctb7
+suffix=.cluster.bert
+
+python -u run.py train -p -d=0 --marg --feat=bert --ftrain=data/$data/train.pid --fdev=data/$data/dev.pid --ftest=data/$data/test.pid -f=exp/$data.bigram$suffix > results/$data.bigram$suffix 2>&1
+
+------------------------------------------------------------
+
+Exited with exit code 1.
+
+Resource usage summary:
+
+    CPU time :                                   126.19 sec.
+    Max Memory :                                 2065 MB
+    Average Memory :                             1340.45 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                45
+    Run time :                                   135 sec.
+    Turnaround time :                            180 sec.
+
+The output (if any) is above this job summary.
+
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@r1cmpsrvs79-14ig0602>
+Subject: Job 16835: <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:mode=exclusive_process;#BSUB -o lsf.log; data=ctb51;suffix=.cluster.bert; python -u run.py train -p -d=0 --marg --feat=bert --ftrain=data/$data/train.pid --fdev=data/$data/dev.pid --ftest=data/$data/test.pid -f=exp/$data.bigram$suffix > results/$data.bigram$suffix 2>&1> in cluster <sisdc01> Exited
+
+Job <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:mode=exclusive_process;#BSUB -o lsf.log; data=ctb51;suffix=.cluster.bert; python -u run.py train -p -d=0 --marg --feat=bert --ftrain=data/$data/train.pid --fdev=data/$data/dev.pid --ftest=data/$data/test.pid -f=exp/$data.bigram$suffix > results/$data.bigram$suffix 2>&1> was submitted from host <vm-10-239-71-153> by user <zhli-suda> in cluster <sisdc01> at Thu Mar 19 16:07:05 2020
+Job was executed on host(s) <4*r1cmpsrvs79-14ig0602>, in queue <HPC.S1.GPU.X795.sha>, as user <zhli-suda> in cluster <sisdc01> at Thu Mar 19 16:09:40 2020
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda> was used as the home directory.
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda/hqzhou/spw-parser> was used as the working directory.
+Started at Thu Mar 19 16:09:40 2020
+Terminated at Thu Mar 19 16:10:33 2020
+Results reported at Thu Mar 19 16:10:33 2020
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -q HPC.S1.GPU.X795.sha
+#BSUB -n 4
+#BSUB -gpu num=1:mode=exclusive_process
+#BSUB -o lsf.log
+
+data=ctb51
+suffix=.cluster.bert
+
+python -u run.py train -p -d=0 --marg --feat=bert --ftrain=data/$data/train.pid --fdev=data/$data/dev.pid --ftest=data/$data/test.pid -f=exp/$data.bigram$suffix > results/$data.bigram$suffix 2>&1
+
+------------------------------------------------------------
+
+Exited with exit code 1.
+
+Resource usage summary:
+
+    CPU time :                                   55.89 sec.
+    Max Memory :                                 918 MB
+    Average Memory :                             645.90 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                45
+    Run time :                                   53 sec.
+    Turnaround time :                            208 sec.
+
+The output (if any) is above this job summary.
+
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@r1cmpsrvs79-14ig0602>
+Subject: Job 16839: <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:mode=exclusive_process;#BSUB -o lsf.log; data=ctb51;suffix=.cluster.bert; python -u run.py train -p -d=0 --marg --feat=bert --ftrain=data/$data/train.pid --fdev=data/$data/dev.pid --ftest=data/$data/test.pid -f=exp/$data.bigram$suffix > results/$data.bigram$suffix 2>&1> in cluster <sisdc01> Exited
+
+Job <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:mode=exclusive_process;#BSUB -o lsf.log; data=ctb51;suffix=.cluster.bert; python -u run.py train -p -d=0 --marg --feat=bert --ftrain=data/$data/train.pid --fdev=data/$data/dev.pid --ftest=data/$data/test.pid -f=exp/$data.bigram$suffix > results/$data.bigram$suffix 2>&1> was submitted from host <vm-10-239-71-153> by user <zhli-suda> in cluster <sisdc01> at Thu Mar 19 16:10:48 2020
+Job was executed on host(s) <4*r1cmpsrvs79-14ig0602>, in queue <HPC.S1.GPU.X795.sha>, as user <zhli-suda> in cluster <sisdc01> at Thu Mar 19 16:11:39 2020
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda> was used as the home directory.
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda/hqzhou/spw-parser> was used as the working directory.
+Started at Thu Mar 19 16:11:39 2020
+Terminated at Thu Mar 19 16:16:53 2020
+Results reported at Thu Mar 19 16:16:53 2020
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -q HPC.S1.GPU.X795.sha
+#BSUB -n 4
+#BSUB -gpu num=1:mode=exclusive_process
+#BSUB -o lsf.log
+
+data=ctb51
+suffix=.cluster.bert
+
+python -u run.py train -p -d=0 --marg --feat=bert --ftrain=data/$data/train.pid --fdev=data/$data/dev.pid --ftest=data/$data/test.pid -f=exp/$data.bigram$suffix > results/$data.bigram$suffix 2>&1
+
+------------------------------------------------------------
+
+TERM_OWNER: job killed by owner.
+Exited with exit code 130.
+
+Resource usage summary:
+
+    CPU time :                                   651.20 sec.
+    Max Memory :                                 4679 MB
+    Average Memory :                             3638.59 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                55
+    Run time :                                   317 sec.
+    Turnaround time :                            365 sec.
+
+The output (if any) is above this job summary.
+

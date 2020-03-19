@@ -215,17 +215,15 @@ class BertField(Field):
 
     def transform(self, sequences):
         subwords, lens = [], []
-        sequences = [([self.bos] if self.bos else []) + list(sequence) +
-                     ([self.eos] if self.eos else [])
+        sequences = [list(sequence)
                      for sequence in sequences]
 
         for sequence in sequences:
-            sequence = [self.preprocess(token) for token in sequence]
+            sequence = self.preprocess(sequence)
             sequence = [piece if piece else self.preprocess(self.pad)
                         for piece in sequence]
-            subwords.append(sum(sequence, []))
-            lens.append(torch.tensor([len(piece) for piece in sequence]))
+            subwords.append(sequence)
         subwords = [torch.tensor(pieces) for pieces in subwords]
         mask = [torch.ones(len(pieces)).gt(0) for pieces in subwords]
 
-        return list(zip(subwords, lens, mask))
+        return list(zip(subwords, mask))
