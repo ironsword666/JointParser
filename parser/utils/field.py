@@ -210,8 +210,8 @@ class BertField(Field):
                      for sequence in sequences]
 
         for sequence in sequences:
-            sequence = [self.preprocess(token) for token in sequence]
-            sequence = [piece if piece else self.preprocess(self.pad)
+            sequence = [self.tokenize(token, add_special_tokens=False) for token in sequence]
+            sequence = [piece if piece else self.tokenize(self.pad, add_special_tokens=False)
                         for piece in sequence]
             subwords.append(sum(sequence, []))
             lens.append(torch.tensor([len(piece) for piece in sequence]))
