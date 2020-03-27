@@ -1,0 +1,424 @@
+ctb51.bigram.cluster.3
+Word: OOV:  43947 33.82%
+Char: OOV:      0  0.00%
+Word: OOV:    692 31.47%
+Char: OOV:      0  0.00%
+Word: OOV:    644 28.61%
+Char: OOV:      0  0.00%
+\nTrain
+SEG P: 64.78% R: 18.49% F: 28.77%	POS P: 63.76% R: 18.20% F: 28.32%
+UCM:  9.65% LCM:  9.56% UP: 75.02% UR: 23.73% UF: 36.06% LP: 73.63% LR: 23.29% LF: 35.39%
+\nDev
+SEG P: 67.43% R: 22.49% F: 33.73%	POS P: 66.07% R: 22.03% F: 33.05%
+UCM: 15.34% LCM: 14.20% UP: 75.50% UR: 26.82% UF: 39.58% LP: 74.00% LR: 26.29% LF: 38.80%
+\nTest
+SEG P: 70.67% R: 20.85% F: 32.21%	POS P: 69.87% R: 20.62% F: 31.84%
+UCM: 16.67% LCM: 16.67% UP: 78.24% UR: 23.75% UF: 36.44% LP: 77.07% LR: 23.39% LF: 35.89%
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@r1cmpsrvs79-14ig0802>
+Subject: Job 15895: <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:nvlink=yes;#BSUB -o eval_ctb51.log; data=ctb51;suffix=.cluster.3; echo $data.bigram$suffix; python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1; python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t; echo "\nTrain";python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid; echo "\nDev";python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid; echo "\nTest";python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t;python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid> in cluster <sisdc01> Done
+
+Job <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:nvlink=yes;#BSUB -o eval_ctb51.log; data=ctb51;suffix=.cluster.3; echo $data.bigram$suffix; python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1; python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t; echo "\nTrain";python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid; echo "\nDev";python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid; echo "\nTest";python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t;python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid> was submitted from host <vm-10-239-71-153> by user <zhli-suda> in cluster <sisdc01> at Tue Mar 17 10:37:11 2020
+Job was executed on host(s) <4*r1cmpsrvs79-14ig0802>, in queue <HPC.S1.GPU.X795.sha>, as user <zhli-suda> in cluster <sisdc01> at Tue Mar 17 10:38:03 2020
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda> was used as the home directory.
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda/hqzhou/spw-parser> was used as the working directory.
+Started at Tue Mar 17 10:38:03 2020
+Terminated at Tue Mar 17 10:41:22 2020
+Results reported at Tue Mar 17 10:41:22 2020
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -q HPC.S1.GPU.X795.sha
+#BSUB -n 4
+#BSUB -gpu num=1:nvlink=yes
+#BSUB -o eval_ctb51.log
+
+data=ctb51
+suffix=.cluster.3
+
+echo $data.bigram$suffix
+
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1
+
+python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t
+python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t
+python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t
+
+echo "\nTrain"
+python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t
+python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid
+
+echo "\nDev"
+python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t
+python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid
+
+echo "\nTest"
+python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t
+python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   206.00 sec.
+    Max Memory :                                 3679 MB
+    Average Memory :                             1599.84 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              5
+    Max Threads :                                17
+    Run time :                                   202 sec.
+    Turnaround time :                            251 sec.
+
+The output (if any) is above this job summary.
+
+ctb51.bigram.cluster.3
+Word: OOV:    759  0.16%
+Char: OOV:      0  0.00%
+Word: OOV:     96  1.58%
+Char: OOV:      0  0.00%
+Word: OOV:     65  1.03%
+Char: OOV:      0  0.00%
+\nTrain
+SEG P: 99.44% R: 99.37% F: 99.41%	POS P: 98.56% R: 98.50% F: 98.53%
+UCM: 45.69% LCM: 43.50% UP: 97.09% UR: 96.24% UF: 96.67% LP: 96.27% LR: 95.43% LF: 95.85%
+\nDev
+SEG P: 97.73% R: 97.99% F: 97.86%	POS P: 95.70% R: 95.95% F: 95.83%
+UCM: 42.33% LCM: 40.34% UP: 92.19% UR: 92.06% UF: 92.13% LP: 90.55% LR: 90.41% LF: 90.48%
+\nTest
+SEG P: 98.02% R: 98.54% F: 98.28%	POS P: 95.44% R: 95.94% F: 95.69%
+UCM: 34.48% LCM: 33.62% UP: 89.58% UR: 89.52% UF: 89.55% LP: 87.94% LR: 87.88% LF: 87.91%
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@r1cmpsrvs79-14ig0802>
+Subject: Job 15918: <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:nvlink=yes;#BSUB -o eval_ctb51.log; data=ctb51;suffix=.cluster.3; echo $data.bigram$suffix; python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1; python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t; echo "\nTrain";python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid; echo "\nDev";python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid; echo "\nTest";python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t;python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid> in cluster <sisdc01> Done
+
+Job <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:nvlink=yes;#BSUB -o eval_ctb51.log; data=ctb51;suffix=.cluster.3; echo $data.bigram$suffix; python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1; python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t; echo "\nTrain";python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid; echo "\nDev";python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid; echo "\nTest";python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t;python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid> was submitted from host <vm-10-239-71-153> by user <zhli-suda> in cluster <sisdc01> at Tue Mar 17 10:49:16 2020
+Job was executed on host(s) <4*r1cmpsrvs79-14ig0802>, in queue <HPC.S1.GPU.X795.sha>, as user <zhli-suda> in cluster <sisdc01> at Tue Mar 17 10:50:08 2020
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda> was used as the home directory.
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda/hqzhou/spw-parser> was used as the working directory.
+Started at Tue Mar 17 10:50:08 2020
+Terminated at Tue Mar 17 10:53:34 2020
+Results reported at Tue Mar 17 10:53:34 2020
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -q HPC.S1.GPU.X795.sha
+#BSUB -n 4
+#BSUB -gpu num=1:nvlink=yes
+#BSUB -o eval_ctb51.log
+
+data=ctb51
+suffix=.cluster.3
+
+echo $data.bigram$suffix
+
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1
+
+python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t
+python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t
+python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t
+
+echo "\nTrain"
+python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t
+python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid
+
+echo "\nDev"
+python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t
+python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid
+
+echo "\nTest"
+python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t
+python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   215.00 sec.
+    Max Memory :                                 3910 MB
+    Average Memory :                             1722.84 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              5
+    Max Threads :                                17
+    Run time :                                   210 sec.
+    Turnaround time :                            258 sec.
+
+The output (if any) is above this job summary.
+
+ctb51.bigram.cluster.3
+Word: OOV:    759  0.16%
+Char: OOV:      0  0.00%
+Word: OOV:     96  1.58%
+Char: OOV:      0  0.00%
+Word: OOV:     65  1.03%
+Char: OOV:      0  0.00%
+\nTrain
+| 99.44 || 99.37 || 99.41
+| 98.56 || 98.50 || 98.53
+| 96.27 || 95.43 || 95.85
+\nDev
+| 97.73 || 97.99 || 97.86
+| 95.70 || 95.95 || 95.83
+| 90.55 || 90.41 || 90.48
+\nTest
+| 98.02 || 98.54 || 98.28
+| 95.44 || 95.94 || 95.69
+| 87.94 || 87.88 || 87.91
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@r1cmpsrvs79-14ig0802>
+Subject: Job 15929: <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:nvlink=yes;#BSUB -o eval_ctb51.log; data=ctb51;suffix=.cluster.3; echo $data.bigram$suffix; #python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1;#python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1;#python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1; python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t; echo "\nTrain";python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -w; echo "\nDev";python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -w; echo "\nTest";python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -w> in cluster <sisdc01> Done
+
+Job <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:nvlink=yes;#BSUB -o eval_ctb51.log; data=ctb51;suffix=.cluster.3; echo $data.bigram$suffix; #python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1;#python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1;#python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1; python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t; echo "\nTrain";python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -w; echo "\nDev";python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -w; echo "\nTest";python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -w> was submitted from host <vm-10-239-71-153> by user <zhli-suda> in cluster <sisdc01> at Tue Mar 17 10:57:11 2020
+Job was executed on host(s) <4*r1cmpsrvs79-14ig0802>, in queue <HPC.S1.GPU.X795.sha>, as user <zhli-suda> in cluster <sisdc01> at Tue Mar 17 10:58:05 2020
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda> was used as the home directory.
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda/hqzhou/spw-parser> was used as the working directory.
+Started at Tue Mar 17 10:58:05 2020
+Terminated at Tue Mar 17 10:59:08 2020
+Results reported at Tue Mar 17 10:59:08 2020
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -q HPC.S1.GPU.X795.sha
+#BSUB -n 4
+#BSUB -gpu num=1:nvlink=yes
+#BSUB -o eval_ctb51.log
+
+data=ctb51
+suffix=.cluster.3
+
+echo $data.bigram$suffix
+
+#python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1
+#python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1
+#python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1
+
+python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t
+python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t
+python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t
+
+echo "\nTrain"
+python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t -w
+python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -w
+
+echo "\nDev"
+python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t -w
+python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -w
+
+echo "\nTest"
+python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t -w
+python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -w
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   59.26 sec.
+    Max Memory :                                 1089 MB
+    Average Memory :                             343.73 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              5
+    Max Threads :                                6
+    Run time :                                   67 sec.
+    Turnaround time :                            117 sec.
+
+The output (if any) is above this job summary.
+
+ctb51.bigram.cluster.3
+Word: OOV:    768  0.16%
+Char: OOV:      0  0.00%
+Word: OOV:     96  1.58%
+Char: OOV:      0  0.00%
+Word: OOV:     62  0.99%
+Char: OOV:      0  0.00%
+\nTrain
+| 99.44 || 99.37 || 99.41
+| 98.57 || 98.50 || 98.53
+| 96.29 || 95.36 || 95.82
+\nDev
+| 97.71 || 98.01 || 97.86
+| 95.66 || 95.95 || 95.81
+| 90.39 || 90.27 || 90.33
+\nTest
+| 98.06 || 98.55 || 98.31
+| 95.48 || 95.95 || 95.71
+| 87.77 || 87.55 || 87.66
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@r1cmpsrvs79-14ig0802>
+Subject: Job 16553: <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:nvlink=yes;#BSUB -o eval_ctb51.log; data=ctb51;suffix=.cluster.3; echo $data.bigram$suffix; python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1; python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t; echo "\nTrain";python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -w; echo "\nDev";python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -w; echo "\nTest";python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -w> in cluster <sisdc01> Done
+
+Job <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:nvlink=yes;#BSUB -o eval_ctb51.log; data=ctb51;suffix=.cluster.3; echo $data.bigram$suffix; python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1; python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t; echo "\nTrain";python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -w; echo "\nDev";python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -w; echo "\nTest";python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -w> was submitted from host <vm-10-239-71-153> by user <zhli-suda> in cluster <sisdc01> at Wed Mar 18 23:22:18 2020
+Job was executed on host(s) <4*r1cmpsrvs79-14ig0802>, in queue <HPC.S1.GPU.X795.sha>, as user <zhli-suda> in cluster <sisdc01> at Wed Mar 18 23:23:10 2020
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda> was used as the home directory.
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda/hqzhou/spw-parser> was used as the working directory.
+Started at Wed Mar 18 23:23:10 2020
+Terminated at Wed Mar 18 23:42:17 2020
+Results reported at Wed Mar 18 23:42:17 2020
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -q HPC.S1.GPU.X795.sha
+#BSUB -n 4
+#BSUB -gpu num=1:nvlink=yes
+#BSUB -o eval_ctb51.log
+
+data=ctb51
+suffix=.cluster.3
+
+echo $data.bigram$suffix
+
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1
+
+python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t
+python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t
+python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t
+
+echo "\nTrain"
+python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t -w
+python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -w
+
+echo "\nDev"
+python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t -w
+python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -w
+
+echo "\nTest"
+python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t -w
+python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -w
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   1142.32 sec.
+    Max Memory :                                 4313 MB
+    Average Memory :                             3013.01 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              5
+    Max Threads :                                17
+    Run time :                                   1153 sec.
+    Turnaround time :                            1199 sec.
+
+The output (if any) is above this job summary.
+
+ctb51.bigram.cluster.3
+Word: OOV:    759  0.16%
+Char: OOV:      0  0.00%
+Word: OOV:     96  1.58%
+Char: OOV:      0  0.00%
+Word: OOV:     65  1.03%
+Char: OOV:      0  0.00%
+\nTrain
+| 99.44 || 99.37 || 99.41
+| 98.56 || 98.50 || 98.53
+| 96.27 || 95.43 || 95.85
+\nDev
+| 97.73 || 97.99 || 97.86
+| 95.70 || 95.95 || 95.83
+| 90.55 || 90.41 || 90.48
+\nTest
+| 98.02 || 98.54 || 98.28
+| 95.44 || 95.94 || 95.69
+| 87.94 || 87.88 || 87.91
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@r1cmpsrvs79-14ig0802>
+Subject: Job 16610: <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:nvlink=yes;#BSUB -o eval_ctb51.log; data=ctb51;suffix=.cluster.3; echo $data.bigram$suffix; python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1; python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t; echo "\nTrain";python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -w; echo "\nDev";python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -w; echo "\nTest";python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -w> in cluster <sisdc01> Done
+
+Job <#!/bin/bash;#BSUB -q HPC.S1.GPU.X795.sha;#BSUB -n 4;#BSUB -gpu num=1:nvlink=yes;#BSUB -o eval_ctb51.log; data=ctb51;suffix=.cluster.3; echo $data.bigram$suffix; python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1;python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1; python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t;python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t;python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t; echo "\nTrain";python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -w; echo "\nDev";python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -w; echo "\nTest";python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t -w;python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -w> was submitted from host <vm-10-239-71-153> by user <zhli-suda> in cluster <sisdc01> at Thu Mar 19 09:34:07 2020
+Job was executed on host(s) <4*r1cmpsrvs79-14ig0802>, in queue <HPC.S1.GPU.X795.sha>, as user <zhli-suda> in cluster <sisdc01> at Thu Mar 19 09:34:59 2020
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda> was used as the home directory.
+</SISDC_GPFS/Home_SE/suda-cst/zhli-suda/hqzhou/spw-parser> was used as the working directory.
+Started at Thu Mar 19 09:34:59 2020
+Terminated at Thu Mar 19 09:39:10 2020
+Results reported at Thu Mar 19 09:39:10 2020
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -q HPC.S1.GPU.X795.sha
+#BSUB -n 4
+#BSUB -gpu num=1:nvlink=yes
+#BSUB -o eval_ctb51.log
+
+data=ctb51
+suffix=.cluster.3
+
+echo $data.bigram$suffix
+
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/train.pid --fpred=exp/$data.bigram$suffix/train.pid > /dev/null 2>&1
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/dev.pid --fpred=exp/$data.bigram$suffix/dev.pid > /dev/null 2>&1
+python -u run.py predict -d=0 --marg --feat=bigram -f=exp/$data.bigram$suffix --fdata=data/$data/test.pid --fpred=exp/$data.bigram$suffix/test.pid > /dev/null 2>&1
+
+python .evaloov.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t
+python .evaloov.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t
+python .evaloov.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t
+
+echo "\nTrain"
+python .evalp.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -t -w
+python .evalb.py -c=config.ini -g=data/$data/train.pid -p=exp/$data.bigram$suffix/train.pid -w
+
+echo "\nDev"
+python .evalp.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -t -w
+python .evalb.py -c=config.ini -g=data/$data/dev.pid -p=exp/$data.bigram$suffix/dev.pid -w
+
+echo "\nTest"
+python .evalp.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -t -w
+python .evalb.py -c=config.ini -g=data/$data/test.pid -p=exp/$data.bigram$suffix/test.pid -w
+
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   343.82 sec.
+    Max Memory :                                 3628 MB
+    Average Memory :                             1835.05 MB
+    Total Requested Memory :                     -
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                55
+    Run time :                                   255 sec.
+    Turnaround time :                            303 sec.
+
+The output (if any) is above this job summary.
+

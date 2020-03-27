@@ -32,19 +32,17 @@ class BertEmbedding(nn.Module):
 
         return s
 
-    def forward(self, subwords, bert_lens, bert_mask):
-        batch_size, seq_len = bert_lens.shape
-        mask = bert_lens.gt(0)
+    def forward(self, subwords, bert_mask):
+        batch_size, seq_len = bert_mask.shape
+        mask = bert_mask
 
         if not self.requires_grad:
             self.bert.eval()
         _, _, bert = self.bert(subwords, attention_mask=bert_mask)
         bert = bert[-self.n_layers:]
         bert = self.scalar_mix(bert)
-        bert = bert[bert_mask].split(bert_lens[mask].tolist())
-        bert = torch.stack([i.mean(0) for i in bert])
-        bert_embed = bert.new_zeros(batch_size, seq_len, self.hidden_size)
-        bert_embed = bert_embed.masked_scatter_(mask.unsqueeze(-1), bert)
+        # bert_embed = bert_embed.masked_scatter_(mask.unsqueeze(-1), bert)
+        bert_embed = bert
         if hasattr(self, 'projection'):
             bert_embed = self.projection(bert_embed)
 
