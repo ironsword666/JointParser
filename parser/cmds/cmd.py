@@ -209,7 +209,7 @@ class CMD(object):
     @torch.no_grad()
     def predict(self, loader):
         self.model.eval()
-
+        coarse_mask = torch.nn.functional.one_hot(torch.tensor([self.CHART.label_cluster(label) for label in self.CHART.vocab.itos]), 3).float().log()
         all_trees = []
         for data in loader:
             if self.args.feat == 'bert':
@@ -232,7 +232,8 @@ class CMD(object):
             s_span, s_label = self.model(feed_dict)
             if self.args.marg:
                 s_span = crf(s_span, mask, marg=True)
-            preds = self.decode(s_span, s_label, mask)
+            preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
+            # preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
                             for i, j, label in pred])
@@ -249,10 +250,50 @@ class CMD(object):
 
         return loss, span_probs
 
-    def decode(self, s_span, s_label, mask):
+    def decode(self, s_span, s_label, mask, corase=None):
         pred_spans = cky(s_span, mask)
-        pred_labels = (1 + s_label[..., 1:].argmax(-1)).tolist()
-        preds = [[(i, j, labels[i][j]) for i, j in spans]
-                 for spans, labels in zip(pred_spans, pred_labels)]
+        if corase is None:
+            pred_labels = (1 + s_label[..., 1:].argmax(-1)).tolist()
+            preds = [[(i, j, labels[i][j]) for i, j in spans]
+                    for spans, labels in zip(pred_spans, pred_labels)]
+        else:
+            bz, lens, _, lsize = s_label.shape
+            # print(corase)
+            pred_values, pred_labels = (s_label.view(bz, lens, lens, lsize, 1) + corase.view(1, 1, 1, lsize, 3))[..., 1:, :].max(-2)
+            # print(pred_values.shape)
+            pred_labels += 1
+            def dt_func(span):
+                i, j, value, label = next(span)
+                if j == i+1:
+                    corase_label = value[:2].argmax(-1)
+                    # print(corase_label)
+                    return i, j, value, label, corase_label, []
+                else:
+                    l_i, l_j, l_v, l_l, l_c, l_t = dt_func(span)
+                    r_i, r_j, r_v, r_l, r_c, r_t = dt_func(span)
+                    if (l_c > 0) == (r_c > 0):
+                        if l_c == 0:
+                            corase_label = value[:2].argmax(-1)
+                            # print(corase_label)
+                        else:
+                            corase_label = 2
+                    else:
+                        corase_label = 2
+                        if l_c == 0:
+                            l_c = l_v[1].argmax(-1) + 1
+                        elif r_c == 0:
+                            r_c = r_v[1].argmax(-1) + 1
+                    l_l = l_l[l_c]
+                    r_l = r_l[r_c]
+                    # print(f"{self.CHART.vocab.itos[l_l]}, {self.CHART.vocab.itos[r_l]} -> {self.CHART.vocab.itos[label[corase_label]]}")
+                    # print()
+                    return i, j, value, label, corase_label, [(l_i, l_j, l_l)] + l_t + [(r_i, r_j, r_l)] + r_t
 
+            def decode_func(span, val, lab):
+                # print(lab)
+                i, j, _, label, _, span = dt_func(iter([(i, j, val[i, j], lab[i, j]) for i, j in span]))
+                return [(i, j, label[2])] + span
+
+            preds = [decode_func(spans, values, labels)
+                        for spans, values, labels in zip(pred_spans, pred_values, pred_labels)]
         return preds

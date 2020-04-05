@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from collections import Counter
-from parser.utils.vocab import Vocab
+from parser.utils.common import pos_label
 from parser.utils.fn import tohalfwidth
+from parser.utils.vocab import Vocab
+
 import torch
 
 
@@ -221,6 +223,20 @@ class ChartField(Field):
             "+")[-1]: min_freq for label, freq in counter.items() if freq < min_freq})
         counter |= meta_labels
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
+
+    def label_cluster(self, label):
+        if label.endswith("|<>"):
+            label = label[:-3].split("+")[-1]
+            if label in pos_label:
+                return 0
+            else:
+                return 2
+        else:
+            label = label.split("+")[-1]
+            if label in pos_label:
+                return 1
+            else:
+                return 2
 
     def get_label_index(self, label):
         if label in self.vocab:
