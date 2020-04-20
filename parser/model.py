@@ -82,13 +82,16 @@ class Model(nn.Module):
         else:
             embed = self.embed_dropout(word_embed)[0]
 
+        embed += torch.normal(0, 0.4, embed.shape).to(embed)
+        embed.requires_grad_()
+
         x = pack_padded_sequence(embed, lens, True, False)
         x, _ = self.lstm(x)
         x, _ = pad_packed_sequence(x, True, total_length=seq_len)
         x = self.lstm_dropout(x)
         scores = self.mlp(x)
 
-        return scores
+        return scores, embed
 
     @classmethod
     def load(cls, path):
