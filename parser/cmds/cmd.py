@@ -31,7 +31,6 @@ class CMD(object):
                 self.FEAT = BertField('bert',
                                       pad='[PAD]',
                                       bos='[CLS]',
-                                      eos='[SEP]',
                                       tokenize=tokenizer.encode)
                 self.fields = CoNLL(CHAR=(self.CHAR, self.FEAT),
                                     LABEL=self.LABEL)

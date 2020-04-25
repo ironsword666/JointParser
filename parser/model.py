@@ -89,7 +89,7 @@ class Model(nn.Module):
 
         if self.args.feat == 'bert':
             feats = feed_dict["feats"]
-            feat_embed = self.feat_embed(*feats)
+            feat_embed = self.feat_embed(*feats)[:, 1:]
             char_embed, feat_embed = self.embed_dropout(char_embed, feat_embed)
             embed = torch.cat((char_embed, feat_embed), dim=-1)
         elif self.args.feat == 'bigram':
