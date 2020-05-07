@@ -114,7 +114,7 @@ def compose(tree):
         if isinstance(node, Tree):
             nodes.extend([child for child in node])
             for i, child in enumerate(node):
-                if isinstance(child, Tree) and child.label() in pos_label:
+                if isinstance(child, Tree) and all([isinstance(grand[0], str) for grand in child]):
                     node[i] = Tree(child.label(), ["".join(child.leaves())])
 
     return tree
@@ -145,24 +145,13 @@ def build(tree, sequence):
               if not isinstance(subtree[0], Tree)]
 
     def recover(label, children):
-        if label.endswith('|<>'):
-            if label[:-3] in pos_label:
-                label = label[:-3]
-                tree = Tree(label, children)
-                return [Tree(label, [Tree("CHAR", [char])
-                                     for char in tree.leaves()])]
-            else:
-                return children
-        else:
-            sublabels = [l for l in label.split('+')]
-            sublabel = sublabels[-1]
-            tree = Tree(sublabel, children)
-            if sublabel in pos_label:
-                tree = Tree(sublabel, [Tree("CHAR", [char])
-                                       for char in tree.leaves()])
-            for sublabel in reversed(sublabels[:-1]):
-                tree = Tree(sublabel, [tree])
-            return [tree]
+        sublabels = [l for l in label.split('+') if not l.endswith('|<>')]
+        if not sublabels:
+            return children
+        tree = Tree(sublabels[-1], children)
+        for sublabel in reversed(sublabels[:-1]):
+            tree = Tree(sublabel, [tree])
+        return [tree]
 
     def track(node):
         i, j, label = next(node)

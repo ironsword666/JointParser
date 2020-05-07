@@ -167,6 +167,7 @@ class CMD(object):
     @torch.no_grad()
     def evaluate(self, loader):
         self.model.eval()
+        coarse_mask = torch.nn.functional.one_hot(torch.tensor([self.CHART.label_cluster(label) for label in self.CHART.vocab.itos]), 3).float().log()
 
         total_loss = 0
         metric = BracketMetric(self.POS.vocab.stoi.keys())
@@ -191,7 +192,8 @@ class CMD(object):
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             s_span, s_label = self.model(feed_dict)
-            loss, s_span = self.get_loss(s_span, s_label, spans, labels, mask)
+            # loss, s_span = self.get_loss(s_span, s_label, spans, labels, mask)
+            preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
             preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
@@ -278,11 +280,14 @@ class CMD(object):
                         else:
                             corase_label = 2
                     else:
-                        corase_label = 2
-                        if l_c == 0:
-                            l_c = l_v[1].argmax(-1) + 1
-                        elif r_c == 0:
-                            r_c = r_v[1].argmax(-1) + 1
+                        if j - i > 4:
+                            corase_label = 2
+                            l_c = 1 if l_c == 0 else l_c
+                            r_c = 1 if r_c == 0 else r_c
+                        else:
+                            corase_label = 1
+                            l_c = 0 if l_c == 1 else l_c
+                            r_c = 0 if r_c == 1 else r_c
                     l_l = l_l[l_c]
                     r_l = r_l[r_c]
                     # print(f"{self.CHART.vocab.itos[l_l]}, {self.CHART.vocab.itos[r_l]} -> {self.CHART.vocab.itos[label[corase_label]]}")
@@ -291,8 +296,8 @@ class CMD(object):
 
             def decode_func(span, val, lab):
                 # print(lab)
-                i, j, _, label, _, span = dt_func(iter([(i, j, val[i, j], lab[i, j]) for i, j in span]))
-                return [(i, j, label[2])] + span
+                i, j, _, label, corase_label, span = dt_func(iter([(i, j, val[i, j], lab[i, j]) for i, j in span]))
+                return [(i, j, label[corase_label])] + span
 
             preds = [decode_func(spans, values, labels)
                         for spans, values, labels in zip(pred_spans, pred_values, pred_labels)]
