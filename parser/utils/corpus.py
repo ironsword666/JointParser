@@ -74,6 +74,7 @@ class Corpus(object):
                   for i, field in enumerate(fields)]
         with open(path, 'r') as f:
             trees = [decompose(Tree.fromstring(string)) for string in f]
+        # discard sentence which is of the form: Constituent -> str
         sentences = [Sentence(fields, tree, pos) for tree, pos in trees
                      if not len(tree) == 1 or isinstance(tree[0][0], Tree)]
 

@@ -91,15 +91,49 @@ def binarize(tree):
 
 
 def decompose(tree):
+    """transform a word tree to a char tree
+
+                                                IP
+            ____________________________________|____
+            |                                         VP
+            |              ___________________________|________
+            |             |                                    VP
+            |             |              ______________________|____
+            |             |             |                           NP
+            |             |             |                       ____|__________________
+            |             |             |                      NP                      |
+            |             |             |              ________|_________              |
+            |             PP            |             NP                 |             |
+            |         ____|___          |         ____|____              |             |
+            NP       |        NP        |       ADJP       NP            NP            NP
+        ____|___     |        |         |        |         |             |             |
+        NR       NR   P        NR        VV       JJ        NN            NN            NN
+        |        |    |        |     ____|___     |     ____|___      ____|___      ____|___
+        CHAR     CHAR CHAR     CHAR CHAR     CHAR CHAR CHAR     CHAR CHAR     CHAR CHAR     CHAR
+        |        |    |        |    |        |    |    |        |    |        |    |        |
+        中        美    在        沪    签        订    高    科        技    合        作    协        议
+
+    Args:
+        tree (Tree): word tree 
+                                                    
+    Returns:
+        Tree: char tree, pre-terminal of each char is `CHAR`
+        List: POS list of word tree (not char tree)
+    """
     tree = tree.copy(True)
     pos = set(list(zip(*tree.pos()))[1])
     nodes = [tree]
     while nodes:
         node = nodes.pop()
         if isinstance(node, Tree):
+            # add all subtree to stack
             nodes.extend([child for child in node])
             for i, child in enumerate(node):
+                # check subtree: POS->WORD 
                 if isinstance(child, Tree) and len(child) == 1 and isinstance(child[0], str):
+                    # replace node[i] with a new created Tree()
+                    # so node[i] is still in nodes and will be checked
+                    # but node[i] won't affect tree anymore
                     node[i] = Tree(child.label(), [Tree("CHAR", [char])
                                                    for char in child[0]])
 
