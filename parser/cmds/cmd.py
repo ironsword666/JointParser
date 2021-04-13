@@ -81,46 +81,16 @@ class CMD(object):
             self.optimizer.step()
             self.scheduler.step()
 
-    # @torch.no_grad()
-    @torch.enable_grad()
+    @torch.no_grad()
     def evaluate(self, loader):
         self.model.eval()
-        # self.model.train()
 
         total_loss, metric = 0, LabelMetric()
 
         for words, feats, labels in loader:
             mask = words.ne(self.args.pad_index)
-            # replace = '过XX建'
-            # chars[0, 20:22] = torch.tensor([self.CHAR.vocab.stoi[char] for char in replace[1:-1]]).to(chars)
-            # bigram[0, 19:22] = torch.tensor([self.CHAR.vocab.stoi[char] for char in [replace[i:i+2] for i in range(len(replace)-1)]]).to(chars)
 
-            # chars[0, 20:22] = 1
-            # bigram[0, 19:22] = 1
-
-            word_text = [self.WORD.vocab.itos[word] for word in words[0]]
-
-            print([(i, word) for i, word in enumerate(word_text)])
-
-            words = words.repeat(200, 1)
-            feats = feats.repeat(200, 1, 1)
-
-            lens = mask.sum(1).tolist()
-
-            with torch.set_grad_enabled(True):
-                scores, embed = self.model(words, feats)
-            
-            check_point = [(i, self.LABEL.vocab.itos[labels[0, i]])
-                           for i in range(lens[0])]
-            check_point_int = list(enumerate(labels[0]))
-            print(check_point_int)
-            embed_grad = [torch.autograd.grad(scores[:, i, labels[0, i]].mean(), 
-                                              embed, 
-                                              retain_graph=True)[0].abs().mean(0).view(len(words[0]), 2, -1).mean(-1).cpu().t() 
-                                              for i, l in check_point_int]
-            heatmap(embed_grad, [word_text],
-                    check_point, 'embed_grad_pip_pos')
-            exit()
+            scores = self.model(words, feats)
             loss = self.get_loss(scores, labels, mask)
             total_loss += loss.item()
             metric(scores.argmax(-1), labels, mask)
@@ -135,7 +105,7 @@ class CMD(object):
         all_labels = []
         for words, feats in loader:
             mask = words.ne(self.args.pad_index)
-            scores = self.model(words, feats)
+            scores, _ = self.model(words, feats)
             pred_labels = scores.argmax(-1).tolist()
             all_labels.extend(pred_labels)
         all_labels = [self.LABEL.vocab.id2token(sequence)
@@ -173,3 +143,48 @@ def heatmap(corr, xticklabels, labels, name='matrix'):
 
 
 
+# @torch.enable_grad()
+# def evaluate(self, loader):
+#     self.model.eval()
+#     # self.model.train()
+
+#     total_loss, metric = 0, LabelMetric()
+
+#     for words, feats, labels in loader:
+#         mask = words.ne(self.args.pad_index)
+#         # replace = '过XX建'
+#         # chars[0, 20:22] = torch.tensor([self.CHAR.vocab.stoi[char] for char in replace[1:-1]]).to(chars)
+#         # bigram[0, 19:22] = torch.tensor([self.CHAR.vocab.stoi[char] for char in [replace[i:i+2] for i in range(len(replace)-1)]]).to(chars)
+
+#         # chars[0, 20:22] = 1
+#         # bigram[0, 19:22] = 1
+
+#         word_text = [self.WORD.vocab.itos[word] for word in words[0]]
+
+#         print([(i, word) for i, word in enumerate(word_text)])
+
+#         words = words.repeat(200, 1)
+#         feats = feats.repeat(200, 1, 1)
+
+#         lens = mask.sum(1).tolist()
+
+#         with torch.set_grad_enabled(True):
+#             scores, embed = self.model(words, feats)
+        
+#         check_point = [(i, self.LABEL.vocab.itos[labels[0, i]])
+#                         for i in range(lens[0])]
+#         check_point_int = list(enumerate(labels[0]))
+#         print(check_point_int)
+#         embed_grad = [torch.autograd.grad(scores[:, i, labels[0, i]].mean(), 
+#                                             embed, 
+#                                             retain_graph=True)[0].abs().mean(0).view(len(words[0]), 2, -1).mean(-1).cpu().t() 
+#                                             for i, l in check_point_int]
+#         heatmap(embed_grad, [word_text],
+#                 check_point, 'embed_grad_pip_pos')
+#         exit()
+#         loss = self.get_loss(scores, labels, mask)
+#         total_loss += loss.item()
+#         metric(scores.argmax(-1), labels, mask)
+#     total_loss /= len(loader)
+
+#     return total_loss, metric

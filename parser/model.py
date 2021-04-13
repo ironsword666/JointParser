@@ -91,7 +91,7 @@ class Model(nn.Module):
         x = self.lstm_dropout(x)
         scores = self.mlp(x)
 
-        return scores, embed
+        return scores
 
     @classmethod
     def load(cls, path):
