@@ -22,6 +22,8 @@ results
 
 # ignore log files
 log*
+*.log
+*.out
 
 # ignore pycache
 __pycache__
