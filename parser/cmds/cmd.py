@@ -105,7 +105,7 @@ class CMD(object):
         all_labels = []
         for words, feats in loader:
             mask = words.ne(self.args.pad_index)
-            scores, _ = self.model(words, feats)
+            scores = self.model(words, feats)
             pred_labels = scores.argmax(-1).tolist()
             all_labels.extend(pred_labels)
         all_labels = [self.LABEL.vocab.id2token(sequence)
