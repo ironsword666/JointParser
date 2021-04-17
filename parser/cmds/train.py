@@ -31,6 +31,8 @@ class Train(CMD):
                                help='unk token in pretrained embeddings')
         subparser.add_argument('--dict-file', default=None,
                                help='path for dictionary')
+                    
+        
         return subparser
 
     def __call__(self, args):

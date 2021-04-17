@@ -192,9 +192,11 @@ class CMD(object):
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             s_span, s_label = self.model(feed_dict)
-            # loss, s_span = self.get_loss(s_span, s_label, spans, labels, mask)
-            preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
-            preds = self.decode(s_span, s_label, mask)
+            loss, s_span = self.get_loss(s_span, s_label, spans, labels, mask)
+            if self.args.constrained_label:
+                preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
+            else:
+                preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
                             for i, j, label in pred])
@@ -234,8 +236,10 @@ class CMD(object):
             s_span, s_label = self.model(feed_dict)
             if self.args.marg:
                 s_span = crf(s_span, mask, marg=True)
-            preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
-            # preds = self.decode(s_span, s_label, mask)
+            if self.args.constrained_label:
+                preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
+            else:
+                preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
                             for i, j, label in pred])
@@ -280,7 +284,8 @@ class CMD(object):
                         else:
                             corase_label = 2
                     else:
-                        if j - i > 4:
+                        # TODO more elegant
+                        if j - i > self.args.alpha:
                             corase_label = 2
                             l_c = 1 if l_c == 0 else l_c
                             r_c = 1 if r_c == 0 else r_c
