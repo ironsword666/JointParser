@@ -69,6 +69,11 @@ class CMD(object):
         self.model.train()
 
         for words, feats, labels in loader:
+            print("show indices")
+            print(words.size())
+            for x in feats:
+                print(x.size())
+
             self.optimizer.zero_grad()
 
             mask = words.ne(self.args.pad_index)
