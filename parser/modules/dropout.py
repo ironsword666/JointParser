@@ -49,14 +49,9 @@ class IndependentDropout(nn.Module):
 
     def forward(self, *items):
         if self.training:
-            print("before mask")
-            for x in items:
-                print(x.size())
+
             masks = [x.new_empty(x.shape[:2]).bernoulli_(1 - self.p)
                      for x in items]
-            print("after mask")
-            for x in masks:
-                print(x.size())
             total = sum(masks)
             scale = len(items) / total.max(torch.ones_like(total))
             masks = [mask * scale for mask in masks]
