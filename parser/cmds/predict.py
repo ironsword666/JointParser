@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import os
 from datetime import datetime
 from parser import Model
 from parser.cmds.cmd import CMD
@@ -49,6 +50,13 @@ class Predict(CMD):
                                 for i in bucket]).argsort()
         corpus.trees = [pred_trees[i] for i in indices]
         print(f"Save the predicted result to {args.fpred}")
+        # create dir
+        path_list = (args.fpred).split(r'/')
+        path_list.pop()
+        path = r'/'.join(path_list)
+        if not os.path.exists(path):
+            os.mkdir(path)
+            
         corpus.save(args.fpred)
         print(f"{total_time}s elapsed, "
               f"{len(dataset) / total_time.total_seconds():.2f} Sents/s")
