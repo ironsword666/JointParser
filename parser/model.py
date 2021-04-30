@@ -76,6 +76,8 @@ class Model(nn.Module):
             embed = torch.cat((word_embed, feat_embed), dim=-1)
         elif self.args.feat == 'bert':
             # discart `[CLS]`
+            for x in feats:
+                print(x.size())
             feat_embed = self.feat_embed(*feats)[:, 1:]
             word_embed, feat_embed = self.embed_dropout(word_embed, feat_embed)
             # concatenate the word and feat representations

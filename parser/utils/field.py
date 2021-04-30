@@ -203,6 +203,10 @@ class ChartField(Field):
 
 class BertField(Field):
 
+    def __init__(self, *args, **kwargs):
+        self.fix_len = kwargs.pop('fix_len') if 'fix_len' in kwargs else 0
+        super().__init__(*args, **kwargs)
+
     def transform(self, sequences):
         subwords, lens = [], []
         sequences = [([self.bos] if self.bos else []) + list(sequence) +
@@ -210,7 +214,9 @@ class BertField(Field):
                      for sequence in sequences]
 
         for sequence in sequences:
-            sequence = [self.tokenize(token, add_special_tokens=False) for token in sequence]
+            
+            # subwords for a token can't be longer than fix_len
+            sequence = [self.tokenize(token, add_special_tokens=False)[:self.fix_len] for token in sequence]
             sequence = [piece if piece else self.tokenize(self.pad, add_special_tokens=False)
                         for piece in sequence]
             subwords.append(sum(sequence, []))

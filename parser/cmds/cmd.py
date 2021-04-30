@@ -33,6 +33,7 @@ class CMD(object):
                 self.FEAT = BertField('bert',
                                       pad='[PAD]',
                                       bos='[CLS]',
+                                      fix_len=args.fix_len,
                                       tokenize=tokenizer.encode)
             self.LABEL = Field('labels')
             self.fields = Treebank(WORD=(self.WORD, self.FEAT),
