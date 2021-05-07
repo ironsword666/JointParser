@@ -33,6 +33,8 @@ def tohalfwidth(token):
 def stripe(x, n, w, offset=(0, 0), dim=1):
     r'''Returns a diagonal stripe of the tensor.
 
+    # TODO usage and how work
+
     Parameters:
         x (Tensor): the input tensor with 2 or more dims.
         n (int): the length of the stripe.
@@ -74,6 +76,48 @@ def pad(tensors, padding_value=0):
 
 
 def binarize(tree):
+    """transform a CFG tree to a CNF tree
+    
+    if a tree has two more children and a child's child is a terminal:
+        add a artificial parent node A* to this child.
+
+    # TODO
+    the operator is to 
+
+                 |
+                IP
+        _________|__________________
+        |              VP            |
+        |          ____|____         |
+        NP       ADVP       VP       |
+        |         |         |        |
+        NN        AD        VA       PU
+    ____|____     |     ____|___     |
+    CHAR CHAR CHAR CHAR CHAR     CHAR CHAR
+    |    |    |    |    |        |    |
+    巧    克    力    很    美        味    .
+
+                              |                           
+                             IP                         
+                        ______|_______________________    
+                    IP|<>                            |  
+                _____|_____________                 |   
+                NP+NN                 VP               |  
+            _____|_____        ______|_____           |   
+        NN|<>         |      |          VP+VA        |  
+    _____|_____      |      |       _____|_____     |   
+    NN|<>       NN|<> NN|<> ADVP+AD VA|<>       VA|<>  PU 
+    |           |     |      |      |           |    |   
+    CHAR        CHAR  CHAR   CHAR   CHAR        CHAR CHAR
+    |           |     |      |      |           |    |   
+    巧           克     力      很      美           味    .  
+
+    Args:
+        tree ([type]): [description]
+
+    Returns:
+        Tree: a 
+    """
     tree = tree.copy(True)
     nodes = [tree]
     while nodes:
@@ -93,25 +137,21 @@ def binarize(tree):
 def decompose(tree):
     """transform a word tree to a char tree
 
-                                                IP
-            ____________________________________|____
-            |                                         VP
-            |              ___________________________|________
-            |             |                                    VP
-            |             |              ______________________|____
-            |             |             |                           NP
-            |             |             |                       ____|__________________
-            |             |             |                      NP                      |
-            |             |             |              ________|_________              |
-            |             PP            |             NP                 |             |
-            |         ____|___          |         ____|____              |             |
-            NP       |        NP        |       ADJP       NP            NP            NP
-        ____|___     |        |         |        |         |             |             |
-        NR       NR   P        NR        VV       JJ        NN            NN            NN
-        |        |    |        |     ____|___     |     ____|___      ____|___      ____|___
-        CHAR     CHAR CHAR     CHAR CHAR     CHAR CHAR CHAR     CHAR CHAR     CHAR CHAR     CHAR
-        |        |    |        |    |        |    |    |        |    |        |    |        |
-        中        美    在        沪    签        订    高    科        技    合        作    协        议
+    For example:
+    `((IP (NP (NN 巧克力)) (VP (ADVP (AD 很)) (VP (VA 美味))) (PU .)))`
+
+                |
+                IP
+        _________|__________________
+        |              VP            |
+        |          ____|____         |
+        NP       ADVP       VP       |
+        |         |         |        |
+        NN        AD        VA       PU
+    ____|____     |     ____|___     |
+    CHAR CHAR CHAR CHAR CHAR     CHAR CHAR
+    |    |    |    |    |        |    |
+    巧    克    力    很    美        味    .
 
     Args:
         tree (Tree): word tree 
@@ -155,6 +195,24 @@ def compose(tree):
 
 
 def factorize(tree, delete_labels=None, equal_labels=None):
+    """Get all spans of a CNF tree but ignore the span only have one terminal (which is usually POS constituent)
+
+    For word-level parsing, ignore POS spans,
+    but for char-level parsing, `CHAR` will be ignored but POS* spans will be saved.
+
+    For example:
+    [(0, 7, 'IP'), (0, 6, 'IP|<>'), (0, 3, 'NP+NN'), (0, 2, 'NN|<>'), 
+    (0, 1, 'NN|<>'), (1, 2, 'NN|<>'), (2, 3, 'NN|<>'), (3, 6, 'VP'), 
+    (3, 4, 'ADVP+AD'), (4, 6, 'VP+VA'), (4, 5, 'VA|<>'), (5, 6, 'VA|<>'), (6, 7, 'PU')]
+
+    We can get sentence length by check list[0]
+
+    Args:
+        tree ([type]): [description]
+        # TODO what delete_labels do?
+        delete_labels ([type], optional): [description]. Defaults to None.
+        equal_labels ([type], optional): [description]. Defaults to None.
+    """
     def track(tree, i):
         label = tree.label()
         if delete_labels is not None and label in delete_labels:

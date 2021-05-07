@@ -51,20 +51,28 @@ def crf(scores, mask, target=None, marg=False):
     lens = mask[:, 0].sum(-1)
     total = lens.sum()
     batch_size, seq_len, _ = scores.shape
+    # in eval(), it's false; and in train(), it's true
     training = scores.requires_grad
     # always enable the gradient computation of scores
-    # in order for the computation of marginal probs
+    # in order for the computation of marginal probs.
+    # requires_grad_(requires_grad=True):
+    # Change if autograd should record operations on scores: 
+    #   sets scores’s requires_grad attribute in-place. Returns this tensor.
+    # TODO shape of s.
     s = inside(scores.requires_grad_(), mask)
+    # TODO purpose?
     logZ = s[0].gather(0, lens.unsqueeze(0)).sum()
     # marginal probs are used for decoding, and can be computed by
     # combining the inside algorithm and autograd mechanism
-    # instead of the entire inside-outside process
+    # instead of the entire inside-outside process.
     probs = scores
     if marg:
+        # Computes and returns the sum of gradients of outputs w.r.t. the inputs.
+        # retain_graph: If False, the graph used to compute the grad will be freed.
         probs, = autograd.grad(logZ, scores, retain_graph=training)
     if target is None:
         return probs
-
+    # TODO why / total?
     loss = (logZ - scores[mask & target].sum()) / total
     return loss, probs
 

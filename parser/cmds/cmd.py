@@ -21,14 +21,17 @@ class CMD(object):
         self.args = args
         if not os.path.exists(args.file):
             os.mkdir(args.file)
+        # build fields
         if not os.path.exists(args.fields) or args.preprocess:
             print("Preprocess the data")
+            # create fields
             self.TREE = RawField('trees')
             self.CHAR = Field('chars', pad=pad, unk=unk,
                               bos=bos, eos=eos, lower=True)
             self.POS = Field('pos')
-
+            # (i, j, l)
             self.CHART = ChartField('charts', unk=unk)
+            # feature engine
             if args.feat == 'bert':
                 tokenizer = BertTokenizer.from_pretrained(args.bert_model)
                 self.FEAT = BertField('bert',
@@ -54,7 +57,7 @@ class CMD(object):
                                           bos=bos, eos=eos, lower=True)
                 self.fields = Treebank(TREE=self.TREE,
                                        CHAR=(self.CHAR, self.BIGRAM,
-                                             self.TRIGRAM),
+                                                self.TRIGRAM),
                                        POS=self.POS,
                                        CHART=self.CHART)
             else:
@@ -62,11 +65,14 @@ class CMD(object):
                                        CHAR=self.CHAR,
                                        POS=self.POS,
                                        CHART=self.CHART)
-
+            # load training corpus
             train = Corpus.load(args.ftrain, self.fields)
+            # load pretrained embeddings 
             embed = Embedding.load(
                 'data/tencent.char.200.txt',
                 args.unk) if args.embed else None
+            # initialize fields
+            # fields only contain vocabularies but not containing data
             self.CHAR.build(train, args.min_freq, embed)
             if hasattr(self, 'FEAT'):
                 self.FEAT.build(train)
@@ -84,10 +90,12 @@ class CMD(object):
                 self.TRIGRAM.build(train, args.min_freq,
                                    embed=embed,
                                    dict_file=args.dict_file)
+            # 10 is for low frequency projection
             self.CHART.build(train, 10)
             self.POS.build(train)
             torch.save(self.fields, args.fields)
         else:
+            # load fields 
             self.fields = torch.load(args.fields)
             self.TREE = self.fields.TREE
             if args.feat == 'bert':
@@ -100,8 +108,10 @@ class CMD(object):
                 self.CHAR = self.fields.CHAR
             self.POS = self.fields.POS
             self.CHART = self.fields.CHART
+        # loss function 
         self.criterion = nn.CrossEntropyLoss(ignore_index=0)
 
+        # update number of chars and labels, identity of specail tokens
         args.update({
             'n_chars': self.CHAR.vocab.n_init,
             'n_labels': len(self.CHART.vocab),
@@ -112,7 +122,9 @@ class CMD(object):
             'eos_index': self.CHAR.eos_index
         })
 
+        # display fields
         vocab = f"{self.TREE}\n{self.CHAR}\n{self.POS}\n{self.CHART}\n"
+        # update input dim
         if hasattr(self, 'FEAT'):
             args.update({
                 'n_feats': self.FEAT.vocab.n_init,
@@ -153,10 +165,35 @@ class CMD(object):
             self.optimizer.zero_grad()
 
             batch_size, seq_len = chars.shape
+            # fenceposts length: (B)
             lens = chars.ne(self.args.pad_index).sum(1) - 1
+            # for a sentence: seq_len=10, fenceposts=6, pad=2
+            # [[True,  True,  True,  True,  True,  True,  True, False, False]]
+            # (B, 1, seq_len-1)
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
+            # NOTE: mask.new_ones(seq_len-1, seq_len-1).triu_(1) get a matrix whose upper triangular part is True (discard diagonal)
+            # such as:
+            # [[False,  True,  True,  True,  True,  True],
+            # [False, False,  True,  True,  True,  True],
+            # [False, False, False,  True,  True,  True],
+            # [False, False, False, False,  True,  True],
+            # [False, False, False, False, False,  True],
+            # [False, False, False, False, False, False]]
+            # NOTE: mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1) get actual part of charts
+            # [[False,  True,  True,  True,  True,  True,  True, False, False],
+            #  [False, False,  True,  True,  True,  True,  True, False, False],
+            #  [False, False, False,  True,  True,  True,  True, False, False],
+            #  [False, False, False, False,  True,  True,  True, False, False],
+            #  [False, False, False, False, False,  True,  True, False, False],
+            #  [False, False, False, False, False, False,  True, False, False],
+            #  [False, False, False, False, False, False, False, False, False],
+            #  [False, False, False, False, False, False, False, False, False],
+            #  [False, False, False, False, False, False, False, False, False]]
+            # (B, seq_len-1, seq_len-1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
+            # (B, seq_len-1, seq_len-1), (B, seq_len-1, seq_len-1, n_labels)
             s_span, s_label = self.model(feed_dict)
+            # crf-loss + cross-entropy-loss
             loss, _ = self.get_loss(s_span, s_label, spans, labels, mask)
             loss.backward()
             nn.utils.clip_grad_norm_(self.model.parameters(),
@@ -167,6 +204,15 @@ class CMD(object):
     @torch.no_grad()
     def evaluate(self, loader):
         self.model.eval()
+        # before float and log
+        # [[1, 0, 0],
+        # [0, 1, 0],
+        # [0, 0, 1],
+        # [1, 0, 0],
+        # [0, 1, 0]]
+        # indicate which class the label is 
+        # (itos_size, 3), 3 is for POS*, POS, SYN/SYN*
+        # TODO log for what?
         coarse_mask = torch.nn.functional.one_hot(torch.tensor([self.CHART.label_cluster(label) for label in self.CHART.vocab.itos]), 3).float().log()
 
         total_loss = 0
@@ -192,16 +238,20 @@ class CMD(object):
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             s_span, s_label = self.model(feed_dict)
+            # mbr 
             loss, s_span = self.get_loss(s_span, s_label, spans, labels, mask)
+            # TODO no need constrained labeling for evaluate
             if self.args.constrained_label:
                 preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
             else:
                 preds = self.decode(s_span, s_label, mask)
+            # build predicted tree
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
                             for i, j, label in pred])
                      for tree, pred in zip(trees, preds)]
             total_loss += loss.item()
+            # compare predict results and ground-truth
             metric([factorize(tree, self.args.delete, self.args.equal)
                     for tree in preds],
                    [factorize(tree, self.args.delete, self.args.equal)
@@ -259,6 +309,7 @@ class CMD(object):
     def decode(self, s_span, s_label, mask, corase=None):
         pred_spans = cky(s_span, mask)
         if corase is None:
+            # [chart: [[]], ]
             pred_labels = (1 + s_label[..., 1:].argmax(-1)).tolist()
             preds = [[(i, j, labels[i][j]) for i, j in spans]
                     for spans, labels in zip(pred_spans, pred_labels)]

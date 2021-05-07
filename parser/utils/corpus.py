@@ -18,6 +18,7 @@ class Sentence(object):
         self.tree = tree
         self.fields = [field if isinstance(field, Iterable) else [field]
                        for field in fields]
+        # [char_tree, chars, pos, charts]
         self.values = [tree, tree.leaves(), pos, factorize(binarize(tree)[0])]
         for field, value in zip(self.fields, self.values):
             for f in field:
@@ -73,9 +74,10 @@ class Corpus(object):
         fields = [field if field is not None else Field(str(i))
                   for i, field in enumerate(fields)]
         with open(path, 'r') as f:
+            # [(char_tree, pos), ...]
             trees = [decompose(Tree.fromstring(string)) for string in f]
-        # discard sentence which is of the form: Constituent -> str
         sentences = [Sentence(fields, tree, pos) for tree, pos in trees
+        # discard sentence which is of the form: Constituent -> str
                      if not len(tree) == 1 or isinstance(tree[0][0], Tree)]
 
         return cls(fields, sentences)

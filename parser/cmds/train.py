@@ -41,7 +41,7 @@ class Train(CMD):
         train = Corpus.load(args.ftrain, self.fields)
         dev = Corpus.load(args.fdev, self.fields)
         test = Corpus.load(args.ftest, self.fields)
-
+        
         train = TextDataset(
             train, self.fields, args.buckets)
         dev = TextDataset(

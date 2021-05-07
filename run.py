@@ -54,7 +54,9 @@ if __name__ == '__main__':
     torch.manual_seed(args.seed)
     os.environ['CUDA_VISIBLE_DEVICES'] = args.device
 
+    # file for save fields
     args.fields = os.path.join(args.file, 'fields')
+    # file for save model
     args.model = os.path.join(args.file, 'model')
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     args = Config(args.conf).update(vars(args))

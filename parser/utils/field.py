@@ -225,16 +225,21 @@ class ChartField(Field):
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
 
     def label_cluster(self, label):
+        # fake label 
         if label.endswith("|<>"):
             label = label[:-3].split("+")[-1]
+            # POS*
             if label in pos_label:
                 return 0
+            # SYN*
             else:
                 return 2
         else:
             label = label.split("+")[-1]
+            # POS
             if label in pos_label:
                 return 1
+            # SYN
             else:
                 return 2
 
