@@ -79,6 +79,7 @@ def crf(scores, mask, target=None, marg=False):
 
 def inside(scores, mask):
     batch_size, seq_len, _ = scores.shape
+    # permute is convenient for diagonal which acts on dim1=0 and dim2=1
     # [seq_len, seq_len, batch_size]
     scores, mask = scores.permute(1, 2, 0), mask.permute(1, 2, 0)
     s = torch.full_like(scores, float('-inf'))
@@ -94,11 +95,13 @@ def inside(scores, mask):
         if w == 1:
             s.diagonal(w)[diag_mask] = scores.diagonal(w)[diag_mask]
             continue
-        # [n, w, batch_size]
+        # [n, w-1, batch_size]
         s_span = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
-        # [batch_size, n, w]
+        # [batch_size, n, w-1]
         s_span = s_span.permute(2, 0, 1)
+        # (T, w-1) -> (T)
         s_span = s_span[diag_mask].logsumexp(-1)
+        # (T) = (T) + (T)
         s.diagonal(w)[diag_mask] = s_span + scores.diagonal(w)[diag_mask]
 
     return s

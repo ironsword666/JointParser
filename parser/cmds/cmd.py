@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import os
+
+from numpy import argmax
 from parser.utils import Embedding
 from parser.utils.alg import cky, crf
 from parser.utils.common import bos, eos, pad, unk
@@ -316,8 +318,10 @@ class CMD(object):
         else:
             bz, lens, _, lsize = s_label.shape
             # print(corase)
+            # TODO purpose?
             pred_values, pred_labels = (s_label.view(bz, lens, lens, lsize, 1) + corase.view(1, 1, 1, lsize, 3))[..., 1:, :].max(-2)
             # print(pred_values.shape)
+            # TODO why ?
             pred_labels += 1
             def dt_func(span):
                 i, j, value, label = next(span)
@@ -358,3 +362,59 @@ class CMD(object):
             preds = [decode_func(spans, values, labels)
                         for spans, values, labels in zip(pred_spans, pred_values, pred_labels)]
         return preds
+
+# def contrained_labeling(node, s):
+#     """[summary]
+
+#     Args:
+#         node ([type]): current node to be label
+#         s ([type]): score for labels
+#     """
+#     # reset label
+#     node.label == None
+#     # check leaf or internal node
+#     if node is 'leaf':
+#         if node.parent.label is None:
+#             node.label = argmax(POS or POS*)
+#         # if parent is not None, change node's label to POS*
+#         else:
+#             node.label = argmax(POS*)
+#     else:
+#         if node.parent.label is None:
+#             # check two children's label
+#             label_left = contrained_labeling(node.left_child, s)
+#             label_right = contrained_labeling(node.right_child, s)
+#             i, j = node.boundary
+#             # two children are both POS*
+#             if label_left in POS* and label_right in POS*:
+#                 node.label = argmax(POS or POS*)
+#             # two children are neither POS*
+#             elif label_left not in POS* and label_right not in POS*:
+#                 node.label = argmax(SYN or SYN*)
+#             # one child is POS* and another is not POS*
+#             # such as: SYN -> POS* SYN
+#             else:
+#                 # small span
+#                 if j - i < alpha:
+#                     # ... => POS/POS* -> POS* POS*
+#                     node.label = argmax(POS or POS*)
+#                     # change children label to POS*
+#                     contrained_labeling(node.left_child, s)
+#                     contrained_labeling(node.right_child, s)
+#                 # large span
+#                 else:
+#                     # ... => SYN -> POS SYN
+#                     node.label = argmax(SYN or SYN*)
+#                     if label_left in POS*:
+#                         node.left_child.label = argmax(POS)
+#                     elif label_right in POS*:
+#                         node.right_child.label = argmax(POS)
+
+#         # if parent is not None, change node's and its children's labels to POS*
+#         else:
+#             node.label = argmax(POS*)
+#             contrained_labeling(node.left_child, s)
+#             contrained_labeling(node.right_child, s)
+
+
+

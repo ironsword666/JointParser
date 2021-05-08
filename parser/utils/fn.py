@@ -40,7 +40,9 @@ def stripe(x, n, w, offset=(0, 0), dim=1):
         n (int): the length of the stripe.
         w (int): the width of the stripe.
         offset (tuple): the offset of the first two dims.
+            NOTE: offset is to start point to stripe
         dim (int): 0 if returns a horizontal stripe; 1 else.
+            NOTE: direction is along length, that is n
 
     Example::
     >>> x = torch.arange(25).view(5, 5)
@@ -57,10 +59,15 @@ def stripe(x, n, w, offset=(0, 0), dim=1):
     tensor([[ 0,  5, 10],
             [ 6, 11, 16]])
     '''
+    # get a tensor which is contiguous in memory 
     x, seq_len = x.contiguous(), x.size(1)
+    # stride is how many elements should jump in each dim
+    # such as [2, 3, 4] -> 12(3*4) for dim0, 4 for dim1, 1 for dim2
+    # NOTE: jump is a concept for elements in actual underlayer memory.
+    # NOTE: numel how many elements in x[0, 0], not use batch_size directly just in case that dim > 3
     stride, numel = list(x.stride()), x[0, 0].numel()
     stride[0] = (seq_len + 1) * numel
-    stride[1] = (1 if dim == 1 else seq_len) * numel
+    stride[1] = (1 if dim == 1 else seq_len) * numel 
     return x.as_strided(size=(n, w, *x.shape[2:]),
                         stride=stride,
                         storage_offset=(offset[0]*seq_len+offset[1])*numel)
