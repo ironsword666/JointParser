@@ -136,6 +136,7 @@ def cky(scores, mask):
         split = p[i][j]
         ltree = backtrack(p, i, split)
         rtree = backtrack(p, split, j)
+        # top-down, [(0, 9), (0, 6), (0, 3), ]
         return [(i, j)] + ltree + rtree
 
     p = p.permute(2, 0, 1).tolist()

@@ -214,7 +214,13 @@ class CMD(object):
         # [0, 1, 0]]
         # indicate which class the label is 
         # (itos_size, 3), 3 is for POS*, POS, SYN/SYN*
-        # TODO log for what?
+        # after log:
+        # [[-inf, -inf, 0.],
+        # [-inf, 0., -inf],
+        # [-inf, -inf, 0.],
+        # [-inf, 0., -inf],
+        # [-inf, -inf, 0.],
+        # log is for used to mask labels to three kinds of sub-labels
         coarse_mask = torch.nn.functional.one_hot(torch.tensor([self.CHART.label_cluster(label) for label in self.CHART.vocab.itos]), 3).float().log()
 
         total_loss = 0
@@ -317,37 +323,62 @@ class CMD(object):
                     for spans, labels in zip(pred_spans, pred_labels)]
         else:
             bz, lens, _, lsize = s_label.shape
-            # print(corase)
-            # TODO purpose?
+
+            # (s_label.view(bz, lens, lens, lsize, 1) + corase.view(1, 1, 1, lsize, 3)): (B, seq_len, seq_len, lsize, 3)
+            # NOTE: [..., 1:, :] is used to mask first unk label, which shouldn't participate in max
+            # NOTE: max(-2) and corase is used to get max labels of three sub-labels: POS*, POS, SYN/SYN*
+            # pred_values, pred_labels = (B, seq_len, seq_len, 3), (B, seq_len, seq_len, 3)
             pred_values, pred_labels = (s_label.view(bz, lens, lens, lsize, 1) + corase.view(1, 1, 1, lsize, 3))[..., 1:, :].max(-2)
-            # print(pred_values.shape)
-            # TODO why ?
+            # recovery order including unk
             pred_labels += 1
+
             def dt_func(span):
+                """[summary]
+
+                Args:
+                    span (iterator): a iterator for top-down spans
+                        a span is like (i, j, max_scores -> Tensor(3), label_indexes -> Tensor(3))
+                Returns:
+                    [type]: [description]
+                """
+                # (i, j, max_scores, label_indexes)
                 i, j, value, label = next(span)
+                # leaf node
                 if j == i+1:
+                    # compare POS* and POS, select larger one
                     corase_label = value[:2].argmax(-1)
                     # print(corase_label)
                     return i, j, value, label, corase_label, []
                 else:
+                    # How to get left child and right child's label?
                     l_i, l_j, l_v, l_l, l_c, l_t = dt_func(span)
                     r_i, r_j, r_v, r_l, r_c, r_t = dt_func(span)
+                    # check children's label
                     if (l_c > 0) == (r_c > 0):
+                        # all POS*
                         if l_c == 0:
                             corase_label = value[:2].argmax(-1)
                             # print(corase_label)
+                        # all not POS*
                         else:
                             corase_label = 2
+                    # one POS*, one not POS*(POS, SYN*, SYN)
                     else:
-                        # TODO more elegant
+                        # large span
                         if j - i > self.args.alpha:
+                            # label self to SYN/SYN*
                             corase_label = 2
+                            # change POS* to POS
                             l_c = 1 if l_c == 0 else l_c
                             r_c = 1 if r_c == 0 else r_c
+                        # small span
                         else:
+                            # label self to POS? # TODO or POS*?
                             corase_label = 1
+                            # change POS to POS*, # TODO SYN*, SYN? 
                             l_c = 0 if l_c == 1 else l_c
                             r_c = 0 if r_c == 1 else r_c
+                    # Tensor(3) to Tensor(1), get real index of label
                     l_l = l_l[l_c]
                     r_l = r_l[r_c]
                     # print(f"{self.CHART.vocab.itos[l_l]}, {self.CHART.vocab.itos[r_l]} -> {self.CHART.vocab.itos[label[corase_label]]}")
@@ -355,12 +386,25 @@ class CMD(object):
                     return i, j, value, label, corase_label, [(l_i, l_j, l_l)] + l_t + [(r_i, r_j, r_l)] + r_t
 
             def decode_func(span, val, lab):
+                """[summary]
+
+                Args:
+                    span ([type]): [description]
+                    val ([type]): [description]
+                    lab ([type]): [description]
+
+                Returns:
+                    [type]: [description]
+                """
                 # print(lab)
                 i, j, _, label, corase_label, span = dt_func(iter([(i, j, val[i, j], lab[i, j]) for i, j in span]))
                 return [(i, j, label[corase_label])] + span
 
             preds = [decode_func(spans, values, labels)
+            # handle one sentence one time
                         for spans, values, labels in zip(pred_spans, pred_values, pred_labels)]
+
+        exit()
         return preds
 
 # def contrained_labeling(node, s):
