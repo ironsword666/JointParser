@@ -48,6 +48,7 @@ def kmeans(x, k):
 
 @torch.enable_grad()
 def crf(scores, mask, target=None, marg=False):
+    # (B)
     lens = mask[:, 0].sum(-1)
     total = lens.sum()
     batch_size, seq_len, _ = scores.shape
@@ -58,9 +59,10 @@ def crf(scores, mask, target=None, marg=False):
     # requires_grad_(requires_grad=True):
     # Change if autograd should record operations on scores: 
     #   sets scores’s requires_grad attribute in-place. Returns this tensor.
-    # TODO shape of s.
+    # (seq_len, seq_len, B)
     s = inside(scores.requires_grad_(), mask)
-    # TODO purpose?
+    # get alpha(0, length) for each sentence
+    # (seq_len, B).gather(0, Tensor(1, B)).sum()
     logZ = s[0].gather(0, lens.unsqueeze(0)).sum()
     # marginal probs are used for decoding, and can be computed by
     # combining the inside algorithm and autograd mechanism
