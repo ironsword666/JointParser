@@ -59,8 +59,10 @@ class Model(nn.Module):
 
         # the Biaffine layers
         self.span_attn = Biaffine(n_in=args.n_mlp_span,
+                                  n_out=4,
                                   bias_x=True,
-                                  bias_y=False)
+                                  bias_y=True)
+
         self.label_attn = Biaffine(n_in=args.n_mlp_label,
                                    n_out=args.n_labels,
                                    bias_x=True,
@@ -157,8 +159,8 @@ class Model(nn.Module):
         label_l = self.mlp_label_l(x)
         label_r = self.mlp_label_r(x)
 
-        # [batch_size, seq_len, seq_len]
-        s_span = self.span_attn(span_l, span_r)
+        # [batch_size, seq_len, seq_len, n_sublabels]
+        s_span = self.span_attn(span_l, span_r).permute(0, 2, 3, 1)
         # [batch_size, seq_len, seq_len, n_labels]
         s_label = self.label_attn(label_l, label_r).permute(0, 2, 3, 1)
 

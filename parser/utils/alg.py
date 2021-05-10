@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from ctypes.wintypes import tagRECT
 from parser.utils.fn import stripe
 
 import torch
@@ -48,10 +49,21 @@ def kmeans(x, k):
 
 @torch.enable_grad()
 def crf(scores, mask, target=None, marg=False):
+    """[summary]
+
+    Args:
+        scores (Tensor(B, seq_len, seq_len, n_labels))
+        mask (Tensor(B, seq_len, seq_len))
+        target (Tensor(B, seq_len, seq_len).int8): Defaults to None.
+        marg (bool, optional): Defaults to False.
+
+    Returns:
+        crf-loss, marginal probability for spans
+    """
     # (B)
     lens = mask[:, 0].sum(-1)
     total = lens.sum()
-    batch_size, seq_len, _ = scores.shape
+    batch_size, seq_len, seq_len, n_labels = scores.shape
     # in eval(), it's false; and in train(), it's true
     training = scores.requires_grad
     # always enable the gradient computation of scores
@@ -59,11 +71,13 @@ def crf(scores, mask, target=None, marg=False):
     # requires_grad_(requires_grad=True):
     # Change if autograd should record operations on scores: 
     #   sets scores’s requires_grad attribute in-place. Returns this tensor.
-    # (seq_len, seq_len, B)
+    # (seq_len, seq_len, n_labels,  B)
     s = inside(scores.requires_grad_(), mask)
-    # get alpha(0, length) for each sentence
-    # (seq_len, B).gather(0, Tensor(1, B)).sum()
-    logZ = s[0].gather(0, lens.unsqueeze(0)).sum()
+    # expand lens to Tensor(1, n_labels, B)
+    lens = lens.view(1, 1, batch_size).expand(-1, n_labels, -1)
+    # get alpha(0, length, l) for each sentence
+    # (seq_len, n_labels, B).gather(0, Tensor(1, n_labels, B)) -> Tensor(1, n_labels, B)
+    logZ = s[0].gather(0, lens).logsumexp(1).sum()
     # marginal probs are used for decoding, and can be computed by
     # combining the inside algorithm and autograd mechanism
     # instead of the entire inside-outside process.
@@ -71,19 +85,37 @@ def crf(scores, mask, target=None, marg=False):
     if marg:
         # Computes and returns the sum of gradients of outputs w.r.t. the inputs.
         # retain_graph: If False, the graph used to compute the grad will be freed.
+        # Tensor(B, seq_len, seq_len, n_labels)
         probs, = autograd.grad(logZ, scores, retain_graph=training)
     if target is None:
         return probs
+    # (B, seq_len, seq_len)
+    span_mask = (target > 0) & mask
+    # (T, n_labels)
+    scores = scores[span_mask] 
+    # (T, 1)
+    target = target[span_mask].unsqueeze(-1) - 1
     # TODO why / total?
-    loss = (logZ - scores[mask & target].sum()) / total
+    loss = (logZ - scores.gather(1, target).sum()) / total
     return loss, probs
 
 
 def inside(scores, mask):
+    """Inside algorithm.
+
+    Args:
+        scores (Tensor(B, seq_len, seq_len, n_labels))
+        mask (Tensor(B, seq_len, seq_len))
+
+    Returns:
+        Tensor: [seq_len, seq_len, n_labels, batch_size]
+    """
     batch_size, seq_len, _ = scores.shape
     # permute is convenient for diagonal which acts on dim1=0 and dim2=1
-    # [seq_len, seq_len, batch_size]
-    scores, mask = scores.permute(1, 2, 0), mask.permute(1, 2, 0)
+    # [seq_len, seq_len, n_labels, batch_size]
+    scores, mask = scores.permute(1, 2, 3, 0), mask.permute(1, 2, 0)
+    # s[i, j, l]: rooted in label `l` and span from i to j
+    # [seq_len, seq_len, n_labels, batch_size]
     s = torch.full_like(scores, float('-inf'))
 
     for w in range(1, seq_len):
@@ -95,17 +127,27 @@ def inside(scores, mask):
         diag_mask = mask.diagonal(w)
 
         if w == 1:
-            s.diagonal(w)[diag_mask] = scores.diagonal(w)[diag_mask]
-            continue
-        # [n, w-1, batch_size]
-        s_span = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
+            # scores.diagonal(w): [batch_size, n_labels, n]
+            # scores.diagonal(w).permute(1, 2, 0)[diag_mask]: (T, n_labels)
+            s.diagonal(w).permute(1, 2, 0)[diag_mask] = scores.diagonal(w).permute(1, 2, 0)[diag_mask]
+            continue 
+
+        # scores for sub-tree spanning from i to k, considering all labels (by logsumexp)
+        # NOTE: stripe considering all split points and spans with same width
+        # stripe: [n, w-1, n_labels, batch_size] -> logsumexp: [n, w-1, batch_size] 
+        s_left = stripe(s, n, w-1, (0, 1)).logsumexp(-2)
+        s_right = stripe(s, n, w-1, (1, w), 0).logsumexp(-2)
+        # left sub-tree and right sub-tree
+        # [n, w-1, batch_size] 
+        s_span = s_left + s_right
         # [batch_size, n, w-1]
         s_span = s_span.permute(2, 0, 1)
         # (T, w-1) -> (T)
         s_span = s_span[diag_mask].logsumexp(-1)
-        # (T) = (T) + (T)
-        s.diagonal(w)[diag_mask] = s_span + scores.diagonal(w)[diag_mask]
+        # (T_labels) = (T, 1) + (T, n_labels)
+        s.diagonal(w).permute(1, 2, 0)[diag_mask] = s_span.unsqueeze(-1) + scores.diagonal(w).permute(1, 2, 0)[diag_mask]
 
+    # [seq_len, seq_len, n_labels, batch_size]
     return s
 
 

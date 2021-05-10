@@ -36,13 +36,16 @@ def stripe(x, n, w, offset=(0, 0), dim=1):
     # TODO usage and how work
 
     Parameters:
-        x (Tensor): the input tensor with 2 or more dims.
+        x (Tensor(seq_len, seq_len, ...)): the input tensor with 2 or more dims.
         n (int): the length of the stripe.
         w (int): the width of the stripe.
         offset (tuple): the offset of the first two dims.
             NOTE: offset is to start point to stripe
         dim (int): 0 if returns a horizontal stripe; 1 else.
             NOTE: direction is along length, that is n
+    
+    Returns: 
+        Tensor(n, w, ...)
 
     Example::
     >>> x = torch.arange(25).view(5, 5)

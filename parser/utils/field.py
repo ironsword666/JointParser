@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from collections import Counter
+
+from numpy import dtype
 from parser.utils.common import pos_label
 from parser.utils.fn import tohalfwidth
 from parser.utils.vocab import Vocab
@@ -264,6 +266,116 @@ class ChartField(Field):
             label_chart = torch.full((seq_len, seq_len), self.pad_index).long()
             for i, j, label in sequence:
                 span_chart[i, j] = 1
+                label_chart[i, j] = self.get_label_index(label)
+            spans.append(span_chart)
+            labels.append(label_chart)
+        return list(zip(spans, labels))
+
+class SubLabelField(ChartField):
+    """
+    Processing (i, j, label, sub_label)
+
+    """
+
+    def build(self, corpus, min_freq=1):
+        sequences = getattr(corpus, self.name)
+        counter = Counter(label
+                          for sequence in sequences
+                          for i, j, label in self.preprocess(sequence))
+        meta_labels = Counter({label.split(
+            "+")[-1]: min_freq for label, freq in counter.items() if freq < min_freq})
+        counter |= meta_labels
+        self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
+
+    def label_cluster(self, label):
+        # fake label 
+        if label.endswith("|<>"):
+            label = label[:-3].split("+")[-1]
+            # POS*
+            if label in pos_label:
+                return 0
+            # SYN*
+            else:
+                return 2
+        else:
+            label = label.split("+")[-1]
+            # POS
+            if label in pos_label:
+                return 1
+            # SYN
+            else:
+                return 2
+
+    def sublabel_cluster(self, label):
+        """cluster full label to four sub label.
+
+        Args:
+            label (str): full_label
+
+        Returns:
+            [int]: 1,2,3,4 for POS*, POS, SYN*, SYN
+        """
+        # dummy label
+        if label.endswith("|<>"):
+            label = label[:-3].split("+")[-1]
+            # POS*
+            if label in pos_label:
+                return 1
+            # SYN*
+            else:
+                return 3
+        else:
+            label = label.split("+")[-1]
+            # POS
+            if label in pos_label:
+                return 2
+            # SYN
+            else:
+                return 4
+
+    def get_label_index(self, label):
+        """
+        Get label index, if doesn't exist,
+        project low frequent label to high frequent label.
+        """
+        if label in self.vocab:
+            return self.vocab[label]
+        else:
+            label_set = set(label.split("+")[:-1])
+            last_state = label.split("+")[-1]
+            for l_set, whole_l, last_l in self.vocab.sorted_label:
+                if last_state == last_l and len(l_set - label_set) <= 0:
+                    return self.vocab[whole_l]
+            return self.vocab[last_state]
+
+    def get_sublabel_index(self, label):
+
+        # high frequent label which is in vocab
+        if label in self.vocab:
+            return self.sublabel_cluster(label)
+        # project low frequent label to high frequent label
+        else:
+            # split POS and SYNs
+            label_set = set(label.split("+")[:-1])
+            last_state = label.split("+")[-1]
+            # compare POS and SYNs with high frequent label
+            for l_set, whole_l, last_l in self.vocab.sorted_label:
+                if last_state == last_l and len(l_set - label_set) <= 0:
+                    return self.sublabel_cluster(whole_l)
+            return self.sublabel_cluster(last_state)
+
+    def transform(self, sequences):
+        sequences = [self.preprocess(sequence) for sequence in sequences]
+        spans, labels = [], []
+
+        for sequence in sequences:
+            seq_len = sequence[0][1] + 1
+            # 0,1,2,3,4 only need 8-bit and 0 indicates span(i, j) is not a constituent
+            span_chart = torch.full((seq_len, seq_len), self.pad_index, dtype=torch.int8)
+            # pad 0 indicates span(i, j) is not a constituent
+            label_chart = torch.full((seq_len, seq_len), self.pad_index).long()
+            for i, j, label in sequence:
+                span_chart[i, j] = self.get_sublabel_index(label)
                 label_chart[i, j] = self.get_label_index(label)
             spans.append(span_chart)
             labels.append(label_chart)
