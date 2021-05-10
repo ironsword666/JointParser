@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from ctypes.wintypes import tagRECT
+
 from parser.utils.fn import stripe
 
 import torch
@@ -94,8 +94,10 @@ def crf(scores, mask, target=None, marg=False):
     # (T, n_labels)
     scores = scores[span_mask] 
     # (T, 1)
-    target = target[span_mask].unsqueeze(-1) - 1
+    target = target[span_mask].unsqueeze(-1).long()
+    target = target - 1
     # TODO why / total?
+    # TODO int8 for index
     loss = (logZ - scores.gather(1, target).sum()) / total
     return loss, probs
 
@@ -110,7 +112,7 @@ def inside(scores, mask):
     Returns:
         Tensor: [seq_len, seq_len, n_labels, batch_size]
     """
-    batch_size, seq_len, _ = scores.shape
+    batch_size, seq_len, seq_len, _ = scores.shape
     # permute is convenient for diagonal which acts on dim1=0 and dim2=1
     # [seq_len, seq_len, n_labels, batch_size]
     scores, mask = scores.permute(1, 2, 3, 0), mask.permute(1, 2, 0)
@@ -124,35 +126,58 @@ def inside(scores, mask):
         n = seq_len - w
         # diag_mask is used for ignoring the excess of each sentence
         # [batch_size, n]
-        diag_mask = mask.diagonal(w)
+        # diag_mask = mask.diagonal(w)
 
         if w == 1:
-            # scores.diagonal(w): [batch_size, n_labels, n]
+            # scores.diagonal(w): [n_labels, batch_size, n]
             # scores.diagonal(w).permute(1, 2, 0)[diag_mask]: (T, n_labels)
-            s.diagonal(w).permute(1, 2, 0)[diag_mask] = scores.diagonal(w).permute(1, 2, 0)[diag_mask]
+            # s.diagonal(w).permute(1, 2, 0)[diag_mask] = scores.diagonal(w).permute(1, 2, 0)[diag_mask]
+            # no need  diag_mask
+            # [n_labels, batch_size]
+            s.diagonal(w).copy_(scores.diagonal(w))
             continue 
-
-        # scores for sub-tree spanning from i to k, considering all labels (by logsumexp)
+        
+        # scores for sub-tree spanning from `i to k` and `k+1 to j`, considering all labels
         # NOTE: stripe considering all split points and spans with same width
-        # stripe: [n, w-1, n_labels, batch_size] -> logsumexp: [n, w-1, batch_size] 
-        s_left = stripe(s, n, w-1, (0, 1)).logsumexp(-2)
-        s_right = stripe(s, n, w-1, (1, w), 0).logsumexp(-2)
-        # left sub-tree and right sub-tree
-        # [n, w-1, batch_size] 
-        s_span = s_left + s_right
+        # stripe: [n, w-1, n_labels, batch_size] 
+        s_left = stripe(s, n, w-1, (0, 1))
+        s_right = stripe(s, n, w-1, (1, w), 0)
+        if s_left.requires_grad:
+            s_left.register_hook(lambda x: x.masked_fill_(torch.isnan(x), 0))
+            s_right.register_hook(lambda x: x.masked_fill_(torch.isnan(x), 0))
+        # logsumexp: [n, w-1, batch_size] 
+        s_span = s_left.logsumexp(-2) + s_right.logsumexp(-2)
         # [batch_size, n, w-1]
         s_span = s_span.permute(2, 0, 1)
-        # (T, w-1) -> (T)
-        s_span = s_span[diag_mask].logsumexp(-1)
-        # (T_labels) = (T, 1) + (T, n_labels)
-        s.diagonal(w).permute(1, 2, 0)[diag_mask] = s_span.unsqueeze(-1) + scores.diagonal(w).permute(1, 2, 0)[diag_mask]
+        if s_span.requires_grad:
+            s_span.register_hook(lambda x: x.masked_fill_(torch.isnan(x), 0))
+        # [batch_size, n]
+        s_span = s_span.logsumexp(-1)
+        # [n_labels, batch_size, n] = [1, batch_size, n] +  [n_labels, batch_size, n]
+        s.diagonal(w).copy_(s_span.unsqueeze(0) + scores.diagonal(w))
 
     # [seq_len, seq_len, n_labels, batch_size]
     return s
 
 
 def cky(scores, mask):
+    """
+    We can use max labels score as span's score,
+    then use the same cky as two-stage.
+
+    When backtracking, we get label as well.
+
+    Args:
+        scores (Tensor(B, seq_len, seq_len, n_labels))
+        mask (Tensor(B, seq_len, seq_len))
+
+    Returns:
+        [[(i, j, l), ...], ...]
+    """
     lens = mask[:, 0].sum(-1)
+    # (B, seq_len, seq_len)
+    scores, labels = scores.max(-1)
+    # [seq_len, seq_len, batch_size]
     scores = scores.permute(1, 2, 0)
     seq_len, seq_len, batch_size = scores.shape
     s = scores.new_zeros(seq_len, seq_len, batch_size)
@@ -160,12 +185,15 @@ def cky(scores, mask):
 
     for w in range(1, seq_len):
         n = seq_len - w
+        # (1, n)
         starts = p.new_tensor(range(n)).unsqueeze(0)
 
         if w == 1:
+            # scores.diagonal(w): [batch_size, n]
             s.diagonal(w).copy_(scores.diagonal(w))
             continue
-        # [n, w, batch_size]
+
+        # [n, w-1, batch_size] 
         s_span = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
         # [batch_size, n, w]
         s_span = s_span.permute(2, 0, 1)
@@ -174,17 +202,83 @@ def cky(scores, mask):
         s.diagonal(w).copy_(s_span + scores.diagonal(w))
         p.diagonal(w).copy_(p_span + starts + 1)
 
-    def backtrack(p, i, j):
+    def backtrack(p, i, j, labels):
+        """span(i, j, l)
+
+        Args:
+            p (List[List]): backtrack points.
+            labels (List[List]: [description]
+
+        Returns:
+            [type]: [description]
+        """
         if j == i + 1:
-            return [(i, j)]
+            return [(i, j, labels[i][j])]
         split = p[i][j]
-        ltree = backtrack(p, i, split)
-        rtree = backtrack(p, split, j)
+        ltree = backtrack(p, i, split, labels)
+        rtree = backtrack(p, split, j, labels)
         # top-down, [(0, 9), (0, 6), (0, 3), ]
-        return [(i, j)] + ltree + rtree
+        return [(i, j, labels[i][j])] + ltree + rtree
 
     p = p.permute(2, 0, 1).tolist()
-    trees = [backtrack(p[i], 0, length)
+    labels = labels.tolist()
+    trees = [backtrack(p[i], 0, length, labels[i])
              for i, length in enumerate(lens.tolist())]
 
-    return trees
+    return trees, 
+
+
+# def cky(scores, mask):
+#     """
+
+#     Args:
+#         scores (Tensor(B, seq_len, seq_len, n_labels))
+#         mask (Tensor(B, seq_len, seq_len))
+
+#     Returns:
+#         [[(i, j, l), ...], ...]
+#     """
+#     lens = mask[:, 0].sum(-1)
+#     scores, labels = scores.max(-1)
+#     # [seq_len, seq_len, n_labels, batch_size]
+#     scores = scores.permute(1, 2, 3, 0)
+#     seq_len, seq_len, n_labels, batch_size = scores.shape
+#     s = scores.new_zeros(seq_len, seq_len, n_labels, batch_size)
+#     p = scores.new_zeros(seq_len, seq_len, n_labels, batch_size).long()
+
+#     for w in range(1, seq_len):
+#         n = seq_len - w
+#         # (1, n)
+#         starts = p.new_tensor(range(n)).unsqueeze(0)
+
+#         if w == 1:
+#             # scores.diagonal(w): [n_labels, batch_size, n]
+#             s.diagonal(w).copy_(scores.diagonal(w))
+#             continue
+
+#         # stripe: [n, w-1, n_labels, batch_size] 
+#         s_left, _ = stripe(s, n, w-1, (0, 1)).max(-2)
+#         s_right, _ = stripe(s, n, w-1, (1, w), 0).max(-2)
+#         # [n, w-1, batch_size] 
+#         s_span = s_left + s_right
+#         # [batch_size, n, w]
+#         s_span = s_span.permute(2, 0, 1)
+#         # [batch_size, n]
+#         s_span, p_span = s_span.max(-1)
+#         s.diagonal(w).copy_(s_span.unsqueeze(0) + scores.diagonal(w))
+#         p.diagonal(w).copy_(p_span + starts + 1)
+
+#     def backtrack(p, i, j):
+#         if j == i + 1:
+#             return [(i, j)]
+#         split = p[i][j]
+#         ltree = backtrack(p, i, split)
+#         rtree = backtrack(p, split, j)
+#         # top-down, [(0, 9), (0, 6), (0, 3), ]
+#         return [(i, j)] + ltree + rtree
+
+#     p = p.permute(2, 0, 1).tolist()
+#     trees = [backtrack(p[i], 0, length)
+#              for i, length in enumerate(lens.tolist())]
+
+#     return trees

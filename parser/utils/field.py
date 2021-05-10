@@ -373,7 +373,7 @@ class SubLabelField(ChartField):
             # 0,1,2,3,4 only need 8-bit and 0 indicates span(i, j) is not a constituent
             span_chart = torch.full((seq_len, seq_len), self.pad_index, dtype=torch.int8)
             # pad 0 indicates span(i, j) is not a constituent
-            label_chart = torch.full((seq_len, seq_len), self.pad_index).long()
+            label_chart = torch.full((seq_len, seq_len), self.pad_index, dtype=torch.long)
             for i, j, label in sequence:
                 span_chart[i, j] = self.get_sublabel_index(label)
                 label_chart[i, j] = self.get_label_index(label)
