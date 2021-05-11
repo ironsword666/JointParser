@@ -92,7 +92,7 @@ def crf(scores, mask, target=None, marg=False):
     # (T, n_labels)
     scores = scores[span_mask] 
     # (T, 1)
-    target = target[span_mask].long().unsqueeze(-1)
+    target = target[span_mask].unsqueeze(-1)
     # TODO why / total?
     # TODO int8 for index
     loss = (logZ - scores.gather(1, target).sum()) / total

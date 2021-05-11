@@ -371,7 +371,7 @@ class SubLabelField(ChartField):
         for sequence in sequences:
             seq_len = sequence[0][1] + 1
             # 0,1,2,3,4 only need 8-bit and 0 indicates span(i, j) is not a constituent
-            span_chart = torch.full((seq_len, seq_len), -1, dtype=torch.int8)
+            span_chart = torch.full((seq_len, seq_len), -1, dtype=torch.long)
             # pad 0 indicates span(i, j) is not a constituent
             label_chart = torch.full((seq_len, seq_len), self.pad_index, dtype=torch.long)
             for i, j, label in sequence:
