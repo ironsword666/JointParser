@@ -225,7 +225,7 @@ def cky(scores, mask):
     trees = [backtrack(p[i], 0, length, labels[i])
              for i, length in enumerate(lens.tolist())]
 
-    return trees, 
+    return trees
 
 
 # def cky(scores, mask):

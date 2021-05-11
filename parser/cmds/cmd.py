@@ -221,7 +221,7 @@ class CMD(object):
         # [-inf, 0., -inf],
         # [-inf, -inf, 0.],
         # log is for used to mask labels to three kinds of sub-labels
-        coarse_mask = torch.nn.functional.one_hot(torch.tensor([self.CHART.sublabel_cluster(label) for label in self.CHART.vocab.itos]), 4).float().log()
+        coarse_mask = torch.nn.functional.one_hot(torch.tensor([self.CHART.sublabel_cluster(label)-1 for label in self.CHART.vocab.itos]), 4).float().log()
 
         total_loss = 0
         metric = BracketMetric(self.POS.vocab.stoi.keys())
@@ -248,11 +248,8 @@ class CMD(object):
             s_span, s_label = self.model(feed_dict)
             # mbr 
             loss, s_span = self.get_loss(s_span, s_label, spans, labels, mask)
-            # TODO no need constrained labeling for evaluate
-            if self.args.constrained_label:
-                preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
-            else:
-                preds = self.decode(s_span, s_label, mask)
+            preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
+
             # build predicted tree
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
@@ -272,7 +269,7 @@ class CMD(object):
     def predict(self, loader):
         self.model.eval()
         # (label_size, 4)
-        coarse_mask = torch.nn.functional.one_hot(torch.tensor([self.CHART.sublabel_cluster(label) for label in self.CHART.vocab.itos]), 4).float().log()
+        coarse_mask = torch.nn.functional.one_hot(torch.tensor([self.CHART.sublabel_cluster(label)-1 for label in self.CHART.vocab.itos]), 4).float().log()
         all_trees = []
         for data in loader:
             if self.args.feat == 'bert':
@@ -295,10 +292,7 @@ class CMD(object):
             s_span, s_label = self.model(feed_dict)
             if self.args.marg:
                 s_span = crf(s_span, mask, marg=True)
-            if self.args.constrained_label:
-                preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
-            else:
-                preds = self.decode(s_span, s_label, mask)
+            preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
                             for i, j, label in pred])
