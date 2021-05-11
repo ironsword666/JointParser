@@ -206,23 +206,7 @@ class CMD(object):
     @torch.no_grad()
     def evaluate(self, loader):
         self.model.eval()
-        # before float and log
-        # [[1, 0, 0],
-        # [0, 1, 0],
-        # [0, 0, 1],
-        # [1, 0, 0],
-        # [0, 1, 0]]
-        # indicate which class the label is 
-        # (itos_size, 3), 3 is for POS*, POS, SYN/SYN*
-        # after log:
-        # [[-inf, -inf, 0.],
-        # [-inf, 0., -inf],
-        # [-inf, -inf, 0.],
-        # [-inf, 0., -inf],
-        # [-inf, -inf, 0.],
-        # log is for used to mask labels to three kinds of sub-labels
-        coarse_mask = torch.nn.functional.one_hot(torch.tensor([self.CHART.sublabel_cluster(label)-1 for label in self.CHART.vocab.itos]), 4).float().log()
-
+        
         total_loss = 0
         metric = BracketMetric(self.POS.vocab.stoi.keys())
 
@@ -248,7 +232,7 @@ class CMD(object):
             s_span, s_label = self.model(feed_dict)
             # mbr 
             loss, s_span = self.get_loss(s_span, s_label, spans, labels, mask)
-            preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
+            preds = self.decode(s_span, s_label, mask)
 
             # build predicted tree
             preds = [build(tree,
@@ -268,8 +252,7 @@ class CMD(object):
     @torch.no_grad()
     def predict(self, loader):
         self.model.eval()
-        # (label_size, 4)
-        coarse_mask = torch.nn.functional.one_hot(torch.tensor([self.CHART.sublabel_cluster(label)-1 for label in self.CHART.vocab.itos]), 4).float().log()
+
         all_trees = []
         for data in loader:
             if self.args.feat == 'bert':
@@ -292,7 +275,7 @@ class CMD(object):
             s_span, s_label = self.model(feed_dict)
             if self.args.marg:
                 s_span = crf(s_span, mask, marg=True)
-            preds = self.decode(s_span, s_label, mask, coarse_mask.to(device=chars.device))
+            preds = self.decode(s_span, s_label, mask)
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
                             for i, j, label in pred])
@@ -310,21 +293,40 @@ class CMD(object):
 
         return loss, span_probs
     
-    def decode(self, s_span, s_label, mask, corase):
+    def decode(self, s_span, s_label, mask):
         """[summary]
 
         Args:
             s_span ([type]): [description]
             s_label ([type]): [description]
             mask ([type]): [description]
-            corase ([type]): [description]
 
         Returns:
             [type]: [description]
         """
 
         pred_spans = cky(s_span, mask)
+        
         batch_size, seq_len, _, label_size = s_label.shape
+
+        # before float and log
+        # [[1, 0, 0],
+        # [0, 1, 0],
+        # [0, 0, 1],
+        # [1, 0, 0],
+        # [0, 1, 0]]
+        # indicate which class the label is 
+        # (itos_size, 3), 3 is for POS*, POS, SYN/SYN*
+        # after log:
+        # [[-inf, -inf, 0.],
+        # [-inf, 0., -inf],
+        # [-inf, -inf, 0.],
+        # [-inf, 0., -inf],
+        # [-inf, -inf, 0.],
+        # log is for used to mask labels to three kinds of sub-labels
+        # (label_size, 4)
+        corase = torch.nn.functional.one_hot(torch.tensor([self.CHART.sublabel_cluster(label) for label in self.CHART.vocab.itos]), 4).float().log().to(self.args.device)
+
         # (s_label.view(bz, lens, lens, lsize, 1) + corase.view(1, 1, 1, lsize, 4)): (B, seq_len, seq_len, lsize, 4)
         # like: [[11, -inf, -inf, -inf], 
         #         -inf, 20, -inf, -inf],

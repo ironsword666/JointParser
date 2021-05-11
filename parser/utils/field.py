@@ -320,18 +320,18 @@ class SubLabelField(ChartField):
             label = label[:-3].split("+")[-1]
             # POS*
             if label in pos_label:
-                return 1
+                return 0
             # SYN*
             else:
-                return 3
+                return 2
         else:
             label = label.split("+")[-1]
             # POS
             if label in pos_label:
-                return 2
+                return 1
             # SYN
             else:
-                return 4
+                return 3
 
     def get_label_index(self, label):
         """
@@ -371,7 +371,7 @@ class SubLabelField(ChartField):
         for sequence in sequences:
             seq_len = sequence[0][1] + 1
             # 0,1,2,3,4 only need 8-bit and 0 indicates span(i, j) is not a constituent
-            span_chart = torch.full((seq_len, seq_len), self.pad_index, dtype=torch.int8)
+            span_chart = torch.full((seq_len, seq_len), -1, dtype=torch.int8)
             # pad 0 indicates span(i, j) is not a constituent
             label_chart = torch.full((seq_len, seq_len), self.pad_index, dtype=torch.long)
             for i, j, label in sequence:
