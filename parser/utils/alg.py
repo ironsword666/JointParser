@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
+from tkinter.messagebox import NO
 from parser.utils.fn import stripe
 
 import torch
@@ -98,11 +99,14 @@ def crf(scores, mask, target=None, marg=False):
     loss = (logZ - scores.gather(1, target).sum()) / total
     return loss, probs
 
-def inside(scores, mask):
+def inside(scores, trans_mask, mask):
     """Simple inside algorithm as supar.
 
     Args:
         scores (Tensor(B, seq_len, seq_len, n_labels))
+        trans_mask (Tensor(n_labels, n_labels, n_labels)): boolen value
+            (i, j, k) == 0 indicates k->ij is impossible
+            (i, j, k) == 1 indicates k->ij is possible
         mask (Tensor(B, seq_len, seq_len))
 
     Returns:
@@ -209,7 +213,159 @@ def inside(scores, mask):
 #     return s
 
 
-def cky(scores, mask):
+def cky_houquan(scores, transitions, start_transitions, mask):
+    """[summary]
+
+    Args:
+        scores ([type]): [description]
+        transitions ([type]): [n_labels]
+        start_transitions ([type]): [n_labels,n_labels,n_labels]
+        mask ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    lens = mask[:, 0].sum(-1)
+    batch_size, seq_len, seq_len, n_labels = scores.shape
+    # [seq_len, seq_len, n_labels, batch_size]
+    scores = scores.permute(1, 2, 3, 0)
+    # [seq_len, syyeq_len, n_labels, batch_size]
+    mask = mask.permute(1, 2, 0)
+    s = torch.zeros_like(scores)
+    # 3 for what ?
+    bp = scores.new_zeros(seq_len, seq_len, n_labels, batch_size, 3).long()
+
+    # (1, 1, n_labels)
+    start_transitions = start_transitions.view(1, 1, n_labels)
+    # (1, 1, n_labels, n_labels, n_labels)
+    transitions = transitions.view(1, 1,
+                                   n_labels, n_labels, n_labels)
+
+    for w in range(1, seq_len):
+        n = seq_len - w
+        # (1, n, 1)
+        starts = bp.new_tensor(range(n)).view(1, n, 1)
+        # (B, n, n_labels)
+        emit_scores = scores.diagonal(w).permute(1, 2, 0)
+        # (B, n, n_labels)
+        diag_s = s.diagonal(w).permute(1, 2, 0)
+        # (B, n, n_labels, 3)
+        diag_bp = bp.diagonal(w).permute(1, 3, 0, 2)
+        #
+        if w == 1:
+            # 考虑长度为1的span是否可以获得这些标签，如不应该是SYN/SYN*
+            diag_s.copy_(emit_scores + start_transitions)
+            continue
+
+        # [batch_size, n, w-1, n_labels, n_labels, n_labels]
+        emit_scores = emit_scores.contiguous().view(batch_size, n, 1, 1, 1, n_labels)
+        s_left = stripe(s, n, w-1, (0, 1)).permute(3, 0, 1, 2).contiguous()
+        s_left = s_left.view(batch_size,
+                             n, w-1,
+                             n_labels, 1, 1)
+        s_right = stripe(s, n, w-1, (1, w), 0).permute(3, 0, 1, 2).contiguous()
+        s_right = s_right.view(batch_size,
+                               n, w-1,
+                               1, n_labels, 1)
+        # [batch_size, n, w-1, n_labels, n_labels, n_labels]
+        inner = s_left + s_right + transitions + emit_scores
+        # [batch_size, n, n_labels]
+        inner, idx = multi_dim_max(inner, [2, 3, 4])
+        idx[..., 0] = idx[..., 0] + starts + 1
+        diag_s.copy_(inner)
+        diag_bp.copy_(idx)
+
+    def backtrack(bp, label, i, j):
+        if j == i + 1:
+            return [(i, j, label)]
+        split, llabel, rlabel = bp[i][j][label]
+        ltree = backtrack(bp, llabel, i, split)
+        rtree = backtrack(bp, rlabel, split, j)
+        return [(i, j, label)] + ltree + rtree
+
+    labels = s.permute(3, 0, 1, 2).argmax(-1)
+    bp = bp.permute(3, 0, 1, 2, 4).tolist()
+    trees = [backtrack(bp[i], labels[i, 0, length], 0, length)
+             for i, length in enumerate(lens.tolist())]
+
+    return trees
+
+def cky_trans(scores, transitions, start_transitions, mask):
+    """[summary]
+
+    Args:
+        scores ([type]): [description]
+        transitions ([type]): [n_labels]
+        start_transitions ([type]): [n_labels,n_labels,n_labels]
+        mask ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    lens = mask[:, 0].sum(-1)
+    batch_size, seq_len, seq_len, n_labels = scores.shape
+    # [seq_len, seq_len, n_labels, batch_size]
+    scores = scores.permute(1, 2, 3, 0)
+    # [seq_len, syyeq_len, n_labels, batch_size]
+    mask = mask.permute(1, 2, 0)
+    s = torch.zeros_like(scores)
+    # 3 for split point, child_left and child_right
+    bp = scores.new_zeros(seq_len, seq_len, n_labels, batch_size, 3).long()
+
+    # (n_labels, 1, 1)
+    start_transitions = start_transitions.view(n_labels, 1, 1)
+
+    for w in range(1, seq_len):
+        n = seq_len - w
+        # (1, n, 1)
+        starts = bp.new_tensor(range(n))[None, :, None]
+        # (n_labels, B, n)
+        emit_scores = scores.diagonal(w)
+        # (n_labels, B, n)
+        diag_s = s.diagonal(w)
+        # (n_labels, B, 3, n)
+        diag_bp = bp.diagonal(w)
+        #
+        if w == 1:
+            # 考虑长度为1的span是否可以获得这些标签，如不应该是SYN/SYN*
+            # (n_labels, B, n)
+            diag_s.copy_(emit_scores + start_transitions)
+            continue
+
+        # stripe: [n, w-1, n_labels, batch_size] 
+        # [n, w-1, n_labels, 1, batch_size] 
+        s_left = stripe(s, n, w-1, (0, 1)).unsqueeze(-2)
+        # [n, w-1, 1, n_labels, batch_size] 
+        s_right = stripe(s, n, w-1, (1, w), 0).unsqueeze(-3)
+        # sum: [n, w-1, n_labels, n_labels, batch_size] 
+        # [batch_size, n, w-1, n_labels, n_labels, 1] 
+        s_span = (s_left + s_right).permute(4, 0, 1, 2, 3).unsqueeze(-1)
+        # [batch_size, n, w-1, n_labels, n_labels, n_labels] 
+        s_span = s_span + transitions + emit_scores.permute(1 ,2 ,0)[..., None, None, None, :]
+        # TODO mask
+        # TODO multi_dim_max
+        # [batch_size, n, n_labels], [batch_size, n, n_labels, 3]
+        inner, idx = multi_dim_max(inner, [2, 3, 4])
+        idx[..., 0] = idx[..., 0] + starts + 1
+        diag_s.copy_(inner)
+        diag_bp.copy_(idx)
+
+    def backtrack(bp, label, i, j):
+        if j == i + 1:
+            return [(i, j, label)]
+        split, llabel, rlabel = bp[i][j][label]
+        ltree = backtrack(bp, llabel, i, split)
+        rtree = backtrack(bp, rlabel, split, j)
+        return [(i, j, label)] + ltree + rtree
+
+    labels = s.permute(3, 0, 1, 2).argmax(-1)
+    bp = bp.permute(3, 0, 1, 2, 4).tolist()
+    trees = [backtrack(bp[i], labels[i, 0, length], 0, length)
+             for i, length in enumerate(lens.tolist())]
+
+    return trees
+
+def cky_labels(scores, mask):
     """
     We can use max labels score as span's score,
     then use the same cky as two-stage.
