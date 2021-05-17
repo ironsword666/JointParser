@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from collections import Counter
+from itertools import product
 
-from numpy import dtype
 from parser.utils.common import pos_label
-from parser.utils.fn import tohalfwidth
+from parser.utils.fn import tohalfwidth, binarize
 from parser.utils.vocab import Vocab
 
 import torch
@@ -287,6 +287,75 @@ class SubLabelField(ChartField):
         counter |= meta_labels
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
 
+        self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
+
+        self.coarse_productions = self.get_coarse_productions(corpus)
+        exit()
+    
+    def get_coarse_productions(self, corpus):
+
+        coarse_productions = set()
+        # char-tree un-cnf
+        for tree in corpus.trees:
+            # cnf
+            tree = binarize(tree)[0]
+            productions = tree.productions()
+            # Production
+            for p in productions:
+                # Symbol() to str
+                left = p.lhs().symbol()
+                # ignore `CHAR`
+                if left == 'CHAR':
+                    continue
+                # list[str]
+                right = [s.symbol() if not isinstance(s, str) else s for s in p.rhs()]
+                # TODO get start mask
+                # A->word
+                if len(right) == 1 and right[0] == 'CHAR':
+                    continue
+                # TODO ('POS*', 'SYN', 'UnaryPOS')?
+                # coarse_production
+                p = self.fine2coarse_production(left, right)
+                coarse_productions.add(p)
+
+        coarse_productions = list(coarse_productions)
+        coarse_productions.sort(key = lambda x: (x[0], x[1], x[2]))
+        for p in coarse_productions:
+            print(p)
+
+        return coarse_productions
+
+    def fine2coarse_production(self, left, right):
+        """
+        Args:
+            left (str): left side of a production 
+            right (list[str]): right side of a production 
+
+        Returns:
+            (left, child_one, child_two)
+        """
+
+
+        left = self.fine2coarse_label(left)
+
+        right = [self.fine2coarse_label(l) for l in right]
+
+        return (left, *right)
+
+    def fine2coarse_label(self, label):
+        """
+        Args:
+            label (str): fine-grained label
+        
+        Return:
+            (str): coarse-grained label
+        """
+
+        idx =  self.get_sublabel_index(label)
+
+        return self.coarse_labels[idx]
+
+
     def statistic(self):
         sub_pos, pos, sub_syn, syn, unary_pos, unary_syn = [], [], [], [], [], []
         print(len(self.vocab))
@@ -396,6 +465,21 @@ class SubLabelField(ChartField):
                     return 5
 
     def get_rules_mask(self):
+
+        coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
+
+        label_dict = {k:v for v, k in enumerate(coarse_labels)}
+
+        sub_pos, pos, sub_syn, syn, unary_pos, unary_syn = coarse_labels
+
+        # coarse productions for left binary trees
+        productions = [
+            (syn, syn, syn),
+            # (syn, syn, pos),
+            (syn, sub_syn, pos),
+            (sub_syn, pos, pos),
+            (sub_syn, )
+        ]
         
         return 
 
@@ -439,7 +523,7 @@ class SubLabelField(ChartField):
             # 0,1,2,3,4 only need 8-bit and 0 indicates span(i, j) is not a constituent
             span_chart = torch.full((seq_len, seq_len), -1, dtype=torch.long)
             # pad 0 indicates span(i, j) is not a constituent
-            label_chart = torch.full((seq_len, seq_len), self.pad_index, dtype=torch.long)
+            label_chart = torch.full((seq_len, seq_len), -1, dtype=torch.long)
             for i, j, label in sequence:
                 span_chart[i, j] = self.get_sublabel_index(label)
                 label_chart[i, j] = self.get_label_index(label)

@@ -99,7 +99,7 @@ def crf(scores, mask, target=None, marg=False):
     loss = (logZ - scores.gather(1, target).sum()) / total
     return loss, probs
 
-def inside(scores, trans_mask, mask):
+def inside(scores, mask):
     """Simple inside algorithm as supar.
 
     Args:
