@@ -356,7 +356,7 @@ class SubLabelField(ChartField):
             else:
                 return 2
 
-    def sublabel_cluster(self, label):
+    def sublabel_cluster(self, label=None):
         """cluster full label to four sub label.
 
         Args:
@@ -365,6 +365,8 @@ class SubLabelField(ChartField):
         Returns:
             [int]: 1,2,3,4 for POS*, POS, SYN*, SYN
         """
+        if label is None:
+            return 6
         # dummy label
         if label.endswith("|<>"):
             label = label[:-3].split("+")[-1]
@@ -392,6 +394,8 @@ class SubLabelField(ChartField):
                 # SYNs+SYN
                 else:
                     return 5
+
+    def 
 
     def get_label_index(self, label):
         """
