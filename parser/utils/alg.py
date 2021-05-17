@@ -365,7 +365,7 @@ def cky_trans(scores, transitions, start_transitions, mask):
 
     return trees
 
-def cky_labels(scores, mask):
+def cky(scores, mask):
     """
     We can use max labels score as span's score,
     then use the same cky as two-stage.

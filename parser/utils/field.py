@@ -287,6 +287,56 @@ class SubLabelField(ChartField):
         counter |= meta_labels
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
 
+    def statistic(self):
+        sub_pos, pos, sub_syn, syn, unary_pos, unary_syn = [], [], [], [], [], []
+        print(len(self.vocab))
+        for label in self.vocab.itos:
+            idx = self.sublabel_cluster(label)
+            if idx == 0:
+                sub_pos.append(label)
+            elif idx == 1:
+                pos.append(label)
+            elif idx == 2:
+                sub_syn.append(label)
+            elif idx == 3:
+                syn.append(label)
+            elif idx == 4:
+                unary_pos.append(label)
+            elif idx == 5:
+                unary_syn.append(label)
+
+        print('------------')
+        print('POS*:')
+        print(len(sub_pos))
+        for l in sub_pos:
+            print(l)
+        print('------------')
+        print('POS:')
+        print(len(pos))
+        for l in pos:
+            print(l)
+        print('------------')
+        print('SYN*:')
+        print(len(sub_syn))
+        for l in sub_syn:
+            print(l)
+        print('------------')
+        print('SYN:')
+        print(len(syn))
+        for l in syn:
+            print(l)
+        print('------------')
+        print('Unary_POS:')
+        print(len(unary_pos))
+        for l in unary_pos:
+            print(l)
+        print('------------')
+        print('Unary_SYN:')
+        print(len(unary_syn))
+        for l in unary_syn:
+            print(l)
+        # exit()
+
     def label_cluster(self, label):
         # fake label 
         if label.endswith("|<>"):
@@ -325,13 +375,23 @@ class SubLabelField(ChartField):
             else:
                 return 2
         else:
-            label = label.split("+")[-1]
-            # POS
-            if label in pos_label:
-                return 1
-            # SYN
+            
+            label = label.split("+")
+            if len(label) == 1:
+                # POS
+                if label[-1] in pos_label:
+                    return 1
+                # SYN
+                else:
+                    return 3
+            # check unary rule
             else:
-                return 3
+                # SYNs+POS
+                if label[-1] in pos_label:
+                    return 4
+                # SYNs+SYN
+                else:
+                    return 5
 
     def get_label_index(self, label):
         """

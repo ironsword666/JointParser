@@ -32,7 +32,7 @@ class CMD(object):
                               bos=bos, eos=eos, lower=True)
             self.POS = Field('pos')
             # (i, j, l)
-            self.CHART = SubLabelField('charts', unk=unk)
+            self.CHART = SubLabelField('charts')
             # feature engine
             if args.feat == 'bert':
                 tokenizer = BertTokenizer.from_pretrained(args.bert_model)
@@ -94,6 +94,7 @@ class CMD(object):
                                    dict_file=args.dict_file)
             # 10 is for low frequency projection
             self.CHART.build(train, 10)
+            # self.CHART.statistic()
             self.POS.build(train)
             torch.save(self.fields, args.fields)
         else:
@@ -117,6 +118,7 @@ class CMD(object):
         args.update({
             'n_chars': self.CHAR.vocab.n_init,
             'n_labels': len(self.CHART.vocab),
+            'n_sublabels': self.CHART.sublabel_cluster(),
             'n_pos_labels': len(self.POS.vocab),
             'pad_index': self.CHAR.pad_index,
             'unk_index': self.CHAR.unk_index,
@@ -328,7 +330,7 @@ class CMD(object):
         # [-inf, -inf, 0.],
         # log is for used to mask labels to three kinds of sub-labels
         # (label_size, 4)
-        corase = torch.nn.functional.one_hot(torch.tensor([self.CHART.sublabel_cluster(label) for label in self.CHART.vocab.itos]), 4).float().log().to(self.args.device)
+        corase = torch.nn.functional.one_hot(torch.tensor([self.CHART.sublabel_cluster(label) for label in self.CHART.vocab.itos]), self.args.n_sublabels).float().log().to(self.args.device)
 
         # (s_label.view(bz, lens, lens, lsize, 1) + corase.view(1, 1, 1, lsize, 4)): (B, seq_len, seq_len, lsize, 4)
         # like: [[11, -inf, -inf, -inf], 
@@ -337,8 +339,7 @@ class CMD(object):
         # NOTE: [..., 1:, :] is used to mask first unk label, which shouldn't participate in max
         # NOTE: max(-2) and corase is used to get max labels of three sub-labels: POS*, POS, SYN/SYN*
         # pred_values, pred_labels = (B, seq_len, seq_len, 4), (B, seq_len, seq_len, 4)
-        _, pred_labels = (s_label.view(batch_size, seq_len, seq_len, label_size, 1) + corase.view(1, 1, 1, label_size, 4))[..., 1:, :].max(-2)
-        pred_labels += 1
+        _, pred_labels = (s_label.view(batch_size, seq_len, seq_len, label_size, 1) + corase.view(1, 1, 1, label_size, self.args.n_sublabels)).max(-2)
 
         preds = [[(i, j, labels[i][j][l]) for i, j, l in spans]
                 for spans, labels in zip(pred_spans, pred_labels)]
