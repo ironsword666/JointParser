@@ -395,7 +395,9 @@ class SubLabelField(ChartField):
                 else:
                     return 5
 
-    def 
+    def get_rules_mask(self):
+        
+        return 
 
     def get_label_index(self, label):
         """
