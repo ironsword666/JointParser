@@ -155,6 +155,60 @@ def inside(scores, mask):
     # [seq_len, seq_len, batch_size]
     return s
 
+def inside_trans(scores, transitions, start_transitions, mask, cands=None):
+    batch_size, seq_len, seq_len, n_labels = scores.shape
+    # [seq_len, seq_len, n_labels, batch_size]
+    scores = scores.permute(1, 2, 3, 0)
+    # [seq_len, seq_len, n_labels, batch_size]
+    mask = mask.permute(1, 2, 0)
+
+    # if cands is not None:
+    #     cands = cands.permute(1, 2, 3, 0)
+    #     cands = cands & mask.view(seq_len, seq_len, 1, batch_size)
+    #     scores = scores.masked_fill(~cands, -1e36)
+        
+    s = torch.full_like(scores, float('-inf'))
+
+    start_transitions = start_transitions.view(n_labels, 1, 1)
+
+
+    for w in range(1, seq_len):
+        n = seq_len - w
+        # (n_labels, B, n)
+        emit_scores = scores.diagonal(w)
+        # (B, n, n_labels)
+        diag_s = s.diagonal(w).permute(1, 2, 0)
+
+        if w == 1:
+            # 考虑长度为1的span是否可以获得这些标签，如不应该是SYN/SYN*
+            # (n_labels, B, n)
+            diag_s.copy_(emit_scores + start_transitions)
+            continue
+
+        # # [batch_size, n, w-1, n_labels, n_labels, n_labels]
+        # emit_scores = emit_scores.view(-1, 1, 1, 1, n_labels)
+
+        # stripe: [n, w-1, n_labels, batch_size] 
+        # [n, w-1, n_labels, 1, batch_size] 
+        s_left = stripe(s, n, w-1, (0, 1)).unsqueeze(-2)
+        # [n, w-1, 1, n_labels, batch_size] 
+        s_right = stripe(s, n, w-1, (1, w), 0).unsqueeze(-3)
+        # sum: [n, w-1, n_labels, n_labels, batch_size] 
+        # [batch_size, n, w-1, n_labels, n_labels, 1] 
+        s_span = (s_left + s_right).permute(4, 0, 1, 2, 3).unsqueeze(-1)
+        # emit_scores.permute(1 ,2 ,0)[..., None, None, None, :]: [batch_size, n, 1, 1, 1, n_labels]
+        # [batch_size, n, w-1, n_labels, n_labels, n_labels] 
+        s_span = s_span + transitions + emit_scores.permute(1 ,2 ,0)[..., None, None, None, :]
+
+        # TODO mask mask_hook ?
+        # or mask 
+
+        # [batch_size, n, n_labels]
+        s_span = s_span.logsumexp([2, 3, 4])
+        diag_s.copy_(s_span)
+
+    return s
+
 # def inside(scores, mask):
 #     """Inside algorithm.
 
@@ -345,9 +399,9 @@ def cky_trans(scores, transitions, start_transitions, mask):
         # TODO mask
         # TODO multi_dim_max
         # [batch_size, n, n_labels], [batch_size, n, n_labels, 3]
-        inner, idx = multi_dim_max(inner, [2, 3, 4])
+        s_span, idx = multi_dim_max(s_span, [2, 3, 4])
         idx[..., 0] = idx[..., 0] + starts + 1
-        diag_s.copy_(inner)
+        diag_s.copy_(s_span)
         diag_bp.copy_(idx)
 
     def backtrack(bp, label, i, j):

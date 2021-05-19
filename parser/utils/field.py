@@ -289,9 +289,29 @@ class SubLabelField(ChartField):
 
         self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
 
-        self.coarse_productions = self.get_coarse_productions(corpus)
-        exit()
-    
+        # 粗粒度的mask tensor
+        # self.coarse_mask = self.get_coarse_mask(corpus)
+
+    def get_coarse_mask(self, corpus):
+
+        label_dict = {k : v for v, k in enumerate(self.coarse_labels)}
+
+        n = len(self.coarse_labels)
+
+        # (n_coarse, n_coarse, n_coarse)
+        coarse_mask = torch.full((n, n, n), 0, dtype=torch.bool)
+
+        coarse_productions = self.get_coarse_productions(corpus)
+
+        for p in coarse_productions:
+            # str to index
+            k = label_dict[p[0]]
+            i = label_dict[p[1]]
+            j = label_dict[p[2]]
+            coarse_mask[i, j, k] = 1
+        
+        return coarse_mask
+
     def get_coarse_productions(self, corpus):
 
         coarse_productions = set()
@@ -404,7 +424,7 @@ class SubLabelField(ChartField):
         print(len(unary_syn))
         for l in unary_syn:
             print(l)
-        # exit()
+        exit()
 
     def label_cluster(self, label):
         # fake label 
