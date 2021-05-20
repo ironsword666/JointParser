@@ -20,6 +20,7 @@ build
 # ignore experimental results
 exp
 results
+test
 
 # ignore log files
 log*

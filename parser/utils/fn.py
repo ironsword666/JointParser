@@ -45,7 +45,7 @@ def stripe(x, n, w, offset=(0, 0), dim=1):
             NOTE: direction is along length, that is n
     
     Returns: 
-        Tensor(n, w, ...)
+        Tensor(n, w, ...): out.shape[2:] is same as x.shape[2:]
 
     Example::
     >>> x = torch.arange(25).view(5, 5)
@@ -83,6 +83,28 @@ def pad(tensors, padding_value=0):
     for i, tensor in enumerate(tensors):
         out_tensor[i][[slice(0, i) for i in tensor.size()]] = tensor
     return out_tensor
+
+
+def multi_dim_max(tensor, dims):
+    value_tensor = None
+    index_tensor = None
+    for dim in dims:
+        if value_tensor is not None:
+            assert index_tensor is not None
+            val, idx = value_tensor.max(dim, keepdim=True)
+            expand_shape = index_tensor.shape
+            expand_shape = [-1] * (len(expand_shape) - 1) + [expand_shape[-1]]
+            idx = idx.unsqueeze(-1)
+            index_tensor = index_tensor.gather(dim, idx.expand(expand_shape))
+            index_tensor = torch.cat([index_tensor, idx], -1)
+        else:
+            val, idx = tensor.max(dim, keepdim=True)
+            index_tensor = idx.unsqueeze(-1)
+        value_tensor = val
+    for i, dim in enumerate(sorted(dims)):
+        value_tensor = value_tensor.squeeze(dim - i)
+        index_tensor = index_tensor.squeeze(dim - i)
+    return value_tensor, index_tensor
 
 
 def binarize(tree):

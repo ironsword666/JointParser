@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from parser.modules import CHAR_LSTM, MLP, BertEmbedding, Biaffine, BiLSTM
+from parser.modules import CHAR_LSTM, MLP, BertEmbedding, Biaffine, BiLSTM, TreeCRFLoss
 from parser.modules.dropout import IndependentDropout, SharedDropout
 
 import torch
@@ -59,7 +59,7 @@ class Model(nn.Module):
 
         # the Biaffine layers
         self.span_attn = Biaffine(n_in=args.n_mlp_span,
-                                  n_out=4,
+                                  n_out=args.n_sublabels,
                                   bias_x=True,
                                   bias_y=True)
 
@@ -67,6 +67,9 @@ class Model(nn.Module):
                                    n_out=args.n_labels,
                                    bias_x=True,
                                    bias_y=True)
+
+        self.crf = TreeCRFLoss(n_labels=args.n_sublabels) 
+        
         self.pad_index = args.pad_index
         self.unk_index = args.unk_index
 
@@ -164,7 +167,7 @@ class Model(nn.Module):
         # [batch_size, seq_len, seq_len, n_labels]
         s_label = self.label_attn(label_l, label_r).permute(0, 2, 3, 1)
 
-        return s_span, s_label
+        return s_span, s_label, self.crf.transitions, self.crf.start_transitions
 
     @classmethod
     def load(cls, path):

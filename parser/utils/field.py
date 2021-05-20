@@ -290,7 +290,7 @@ class SubLabelField(ChartField):
         self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
 
         # 粗粒度的mask tensor
-        # self.coarse_mask = self.get_coarse_mask(corpus)
+        self.coarse_mask = self.get_coarse_mask(corpus)
 
     def get_coarse_mask(self, corpus):
 
@@ -424,7 +424,7 @@ class SubLabelField(ChartField):
         print(len(unary_syn))
         for l in unary_syn:
             print(l)
-        exit()
+        # exit()
 
     def label_cluster(self, label):
         # fake label 
