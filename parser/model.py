@@ -68,7 +68,7 @@ class Model(nn.Module):
                                    bias_x=True,
                                    bias_y=True)
 
-        self.crf = TreeCRFLoss(n_labels=args.n_sublabels) 
+        # self.crf = TreeCRFLoss(n_labels=args.n_sublabels) 
         
         self.pad_index = args.pad_index
         self.unk_index = args.unk_index
@@ -167,7 +167,7 @@ class Model(nn.Module):
         # [batch_size, seq_len, seq_len, n_labels]
         s_label = self.label_attn(label_l, label_r).permute(0, 2, 3, 1)
 
-        return s_span, s_label, self.crf.transitions, self.crf.start_transitions
+        return s_span, s_label
 
     @classmethod
     def load(cls, path):

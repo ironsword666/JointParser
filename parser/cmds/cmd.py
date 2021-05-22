@@ -199,9 +199,9 @@ class CMD(object):
             # (B, seq_len-1, seq_len-1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             # (B, seq_len-1, seq_len-1), (B, seq_len-1, seq_len-1, n_labels)
-            s_span, s_label, transitions, start_transitions = self.model(feed_dict)
+            s_span, s_label = self.model(feed_dict)
             # crf-loss + cross-entropy-loss
-            loss, _ = self.get_loss(s_span, s_label, transitions, start_transitions, spans, labels, mask, self.label_mask)
+            loss, _ = self.get_loss(s_span, s_label, self.transitions, self.start_transitions, spans, labels, mask)
             loss.backward()
             nn.utils.clip_grad_norm_(self.model.parameters(),
                                      self.args.clip)
@@ -234,10 +234,10 @@ class CMD(object):
             lens = chars.ne(self.args.pad_index).sum(1) - 1
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
-            s_span, s_label, transitions, start_transitions = self.model(feed_dict)
+            s_span, s_label = self.model(feed_dict)
             # mbr 
-            loss, s_span = self.get_loss(s_span, s_label, transitions, start_transitions, spans, labels, mask, self.label_mask)
-            preds = self.decode(s_span, s_label, transitions, start_transitions, mask, self.label_mask)
+            loss, s_span = self.get_loss(s_span, s_label, self.transitions, self.start_transitions, spans, labels, mask)
+            preds = self.decode(s_span, s_label, self.transitions, self.start_transitions, mask)
 
             # build predicted tree
             preds = [build(tree,
@@ -277,10 +277,10 @@ class CMD(object):
             lens = chars.ne(self.args.pad_index).sum(1) - 1
             mask = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
-            s_span, s_label, transitions, start_transitions = self.model(feed_dict)
+            s_span, s_label = self.model(feed_dict)
             if self.args.marg:
-                s_span = crf(s_span, transitions, start_transitions, mask, self.label_mask, marg=True)
-            preds = self.decode(s_span, s_label, transitions, start_transitions, mask, self.label_mask)
+                s_span = crf(s_span, self.transitions, self.start_transitions, mask, marg=True)
+            preds = self.decode(s_span, s_label, self.transitions, self.start_transitions, mask)
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
                             for i, j, label in pred])
@@ -289,9 +289,9 @@ class CMD(object):
 
         return all_trees
 
-    def get_loss(self, s_span, s_label, transitions, start_transitions, spans, labels, mask, label_mask):
-        span_mask = spans.ge(0) & mask
-        span_loss, span_probs = crf(s_span, transitions, start_transitions, mask, label_mask, spans, self.args.marg)
+    def get_loss(self, s_span, s_label, transitions, start_transitions, spans, labels, mask):
+        span_mask = spans[..., -1].ge(0) & mask
+        span_loss, span_probs = crf(s_span, transitions, start_transitions, mask, spans, self.args.marg)
         label_loss = self.criterion(s_label[span_mask], labels[span_mask])
         loss = span_loss + label_loss 
         # sublabel_loss
@@ -301,7 +301,7 @@ class CMD(object):
 
         return loss, span_probs
     
-    def decode(self, s_span, s_label, transitions, start_transitions, mask, label_mask):
+    def decode(self, s_span, s_label, transitions, start_transitions, mask):
         """[summary]
 
         Args:
@@ -313,7 +313,7 @@ class CMD(object):
             [type]: [description]
         """
 
-        pred_spans = cky(s_span, transitions, start_transitions, mask, label_mask)
+        pred_spans = cky(s_span, transitions, start_transitions, mask)
         
         batch_size, seq_len, _, label_size = s_label.shape
 

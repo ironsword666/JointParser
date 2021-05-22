@@ -4,7 +4,7 @@ from collections import Counter
 from itertools import product
 
 from parser.utils.common import pos_label
-from parser.utils.fn import tohalfwidth, binarize
+from parser.utils.fn import tohalfwidth, binarize, add_child
 from parser.utils.vocab import Vocab
 
 import torch
@@ -544,8 +544,10 @@ class SubLabelField(ChartField):
             span_chart = torch.full((seq_len, seq_len), -1, dtype=torch.long)
             # pad 0 indicates span(i, j) is not a constituent
             label_chart = torch.full((seq_len, seq_len), -1, dtype=torch.long)
-            for i, j, label in sequence:
-                span_chart[i, j] = self.get_sublabel_index(label)
+            sequence = add_child(iter(sequence))[1]
+            for i, j, (left, right, label) in sequence:
+                idx_l, idx_r, idx = self.sublabel_cluster(left), self.sublabel_cluster(right), self.sublabel_cluster(label)
+                span_chart[i, j] = torch.tensor([idx_l, idx_r, idx])
                 label_chart[i, j] = self.get_label_index(label)
             spans.append(span_chart)
             labels.append(label_chart)

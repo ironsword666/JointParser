@@ -287,3 +287,14 @@ def build(tree, sequence):
     tree = Tree(label, track(iter(sequence)))
 
     return tree
+
+def add_child(node):
+
+    i, j, label = next(node)
+
+    if j == i + 1:
+        return label, [(i, j, (label, label, label))]
+    else:
+        left_label, left_child = add_child(node) 
+        right_label, right_child = add_child(node) 
+        return label, [(i, j, (left_label, right_label, label))] + left_child + right_child
