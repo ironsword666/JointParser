@@ -1,5 +1,16 @@
 # ignore data files
 data
+# ignore experiment model
+exp
+# ignore experiment log files
+log
+log*
+# ignore experiment output or results
+output
+results
+# ignore bash dir
+bash 
+
 
 # ignore bash scripts
 *.sh
@@ -17,23 +28,15 @@ build
 # ignore hidden files
 .*
 
-# ignore experimental results
-exp
-results
-test
-
-# ignore log files
-log*
-
 # ignore pycache
 __pycache__
+
+# ignore vscode
+.vscode
 
 # ignore saved model
 *.pkl
 *.pt
-
-# ignore vscode
-.vscode
 
 # ignore EVALB
 EVALB
