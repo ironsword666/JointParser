@@ -49,7 +49,7 @@ def kmeans(x, k):
 
 
 @torch.enable_grad()
-def crf(scores, transitions, start_transitions, mask, label_mask, target=None, marg=False):
+def crf(scores, transitions, start_transitions, mask, target=None, marg=False):
     """[summary]
 
     Args:
@@ -73,10 +73,11 @@ def crf(scores, transitions, start_transitions, mask, label_mask, target=None, m
     # Change if autograd should record operations on scores: 
     #   sets scores’s requires_grad attribute in-place. Returns this tensor.
     # (seq_len, seq_len, B)
-    s = inside(scores.requires_grad_(), transitions, start_transitions, mask, label_mask)
+    s = inside(scores.requires_grad_(), transitions, start_transitions, mask)
+    lens = lens.view(1, 1, batch_size).expand([-1, n_labels, -1])
     # get alpha(0, length, l) for each sentence
-    # (seq_len, B).gather(0, Tensor(1, B)) -> Tensor(1, B)
-    logZ = s[0].gather(0, lens.unsqueeze(0)).sum()
+    # (seq_len, n_labels, B).gather(0, Tensor(1, B)) -> Tensor(1, B)
+    logZ = s[0].gather(0, lens).logsumexp(-2).sum()
     # marginal probs are used for decoding, and can be computed by
     # combining the inside algorithm and autograd mechanism
     # instead of the entire inside-outside process.
@@ -156,7 +157,7 @@ def crf(scores, transitions, start_transitions, mask, label_mask, target=None, m
 #     # [seq_len, seq_len, batch_size]
 #     return s
 
-def inside(scores, transitions, start_transitions, mask, label_mask, cands=None):
+def inside(scores, transitions, start_transitions, mask):
     batch_size, seq_len, seq_len, n_labels = scores.shape
     # [seq_len, seq_len, n_labels, batch_size]
     scores = scores.permute(1, 2, 3, 0)
@@ -170,13 +171,13 @@ def inside(scores, transitions, start_transitions, mask, label_mask, cands=None)
         
     s = torch.full_like(scores, float('-inf'))
 
-    start_transitions = start_transitions.view(n_labels, 1, 1)
+    start_transitions = start_transitions.view(1, 1, n_labels)
 
 
     for w in range(1, seq_len):
         n = seq_len - w
-        # (n_labels, B, n)
-        emit_scores = scores.diagonal(w)
+        # (B, n, n_labels)
+        emit_scores = scores.diagonal(w).permute(1, 2, 0)
         # (B, n, n_labels)
         diag_s = s.diagonal(w).permute(1, 2, 0)
 
@@ -199,10 +200,8 @@ def inside(scores, transitions, start_transitions, mask, label_mask, cands=None)
         s_span = (s_left + s_right).permute(4, 0, 1, 2, 3).unsqueeze(-1)
         # emit_scores.permute(1 ,2 ,0)[..., None, None, None, :]: [batch_size, n, 1, 1, 1, n_labels]
         # [batch_size, n, w-1, n_labels, n_labels, n_labels] 
-        s_span = s_span + transitions + emit_scores.permute(1 ,2 ,0)[..., None, None, None, :]
+        s_span = s_span + transitions + emit_scores[..., None, None, None, :]
 
-        # TODO mask_hook ?
-        s_span.masked_fill_(-label_mask, float('-inf'))
         if s_span.requires_grad:
             s_span.register_hook(lambda x: x.masked_fill_(torch.isnan(x), 0))
         # [batch_size, n, n_labels]
@@ -218,7 +217,7 @@ def inside(scores, transitions, start_transitions, mask, label_mask, cands=None)
 
 
 
-def cky(scores, transitions, start_transitions, mask, label_mask):
+def cky(scores, transitions, start_transitions, mask):
     """[summary]
 
     Args:
@@ -269,10 +268,8 @@ def cky(scores, transitions, start_transitions, mask, label_mask):
         # [batch_size, n, w-1, n_labels, n_labels, 1] 
         s_span = (s_left + s_right).permute(4, 0, 1, 2, 3).unsqueeze(-1)
         # [batch_size, n, w-1, n_labels, n_labels, n_labels] 
-        s_span = s_span + transitions + emit_scores.permute(1 ,2 ,0)[..., None, None, None, :]
-        # TODO mask
-        # TODO multi_dim_max
-        s_span.masked_fill_(label_mask, float('-inf'))
+        s_span = s_span + transitions + emit_scores[..., None, None, None, :]
+
         # [batch_size, n, n_labels], [batch_size, n, n_labels, 3]
         s_span, idx = multi_dim_max(s_span, [2, 3, 4])
         idx[..., 0] = idx[..., 0] + starts + 1

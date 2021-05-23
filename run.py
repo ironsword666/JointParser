@@ -53,6 +53,7 @@ if __name__ == '__main__':
     torch.set_num_threads(args.threads)
     torch.manual_seed(args.seed)
     os.environ['CUDA_VISIBLE_DEVICES'] = args.device
+    print(args.batch_size)
 
     # file for save fields
     args.fields = os.path.join(args.file, 'fields')
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     args.model = os.path.join(args.file, 'model')
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
     args = Config(args.conf).update(vars(args))
-
+    print(args.batch_size)
     print(f"Run the subcommand in mode {args.mode}")
     cmd = subcommands[args.mode]
     cmd(args)

@@ -93,8 +93,8 @@ class CMD(object):
                                    embed=embed,
                                    dict_file=args.dict_file)
             # 10 is for low frequency projection
-            self.CHART.build(train, 1)
-            self.CHART.statistic()
+            self.CHART.build(train, 10)
+            # self.CHART.statistic()
             self.POS.build(train)
             torch.save(self.fields, args.fields)
         else:
@@ -113,7 +113,8 @@ class CMD(object):
             self.CHART = self.fields.CHART
         
         # mask for coarse label
-        self.label_mask = self.CHART.coarse_mask.to(self.args.device)
+        self.transitions = self.CHART.coarse_mask.to(self.args.device)
+        self.start_transitions = self.CHART.unary_mask.to(self.args.device)
         # loss function 
         self.criterion = nn.CrossEntropyLoss()
 
@@ -290,7 +291,7 @@ class CMD(object):
         return all_trees
 
     def get_loss(self, s_span, s_label, transitions, start_transitions, spans, labels, mask):
-        span_mask = spans[..., -1].ge(0) & mask
+        span_mask = spans.ge(0) & mask
         span_loss, span_probs = crf(s_span, transitions, start_transitions, mask, spans, self.args.marg)
         label_loss = self.criterion(s_label[span_mask], labels[span_mask])
         loss = span_loss + label_loss 

@@ -2,6 +2,8 @@
 
 import unicodedata
 
+import torch
+
 from nltk.tree import Tree
 from parser.utils.common import pos_label
 

@@ -3,6 +3,8 @@
 from collections import Counter
 from itertools import product
 
+from numpy import dtype
+
 from parser.utils.common import pos_label
 from parser.utils.fn import tohalfwidth, binarize, add_child
 from parser.utils.vocab import Vocab
@@ -289,8 +291,9 @@ class SubLabelField(ChartField):
 
         self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
 
-        # 粗粒度的mask tensor
-        self.coarse_mask = self.get_coarse_mask(corpus)
+        # mask tensor
+        self.coarse_mask, self.unary_mask = self.get_coarse_mask(corpus)
+
 
     def get_coarse_mask(self, corpus):
 
@@ -298,23 +301,103 @@ class SubLabelField(ChartField):
 
         n = len(self.coarse_labels)
 
-        # (n_coarse, n_coarse, n_coarse)
-        coarse_mask = torch.full((n, n, n), 0, dtype=torch.bool)
+        coarse_productions = [
+            # ('POS', 'POS', 'SYN'),
+            ('POS', 'POS*', 'POS*'),
+            # ('POS', 'POS*', 'UnaryPOS'),
+            # ('POS', 'SYN', 'UnaryPOS'),
+            ('POS*', 'POS*', 'POS*'),
+            # ('POS*', 'SYN', 'UnaryPOS'),
+            ('SYN', 'POS', 'POS'),
+            ('SYN', 'POS', 'SYN'),
+            ('SYN', 'POS', 'UnaryPOS'),
+            ('SYN', 'POS', 'UnarySYN'),
+            ('SYN', 'SYN', 'POS'),
+            ('SYN', 'SYN', 'SYN'),
+            ('SYN', 'SYN', 'UnaryPOS'),
+            ('SYN', 'SYN', 'UnarySYN'),
+            ('SYN', 'SYN*', 'POS'),
+            ('SYN', 'SYN*', 'SYN'),
+            ('SYN', 'SYN*', 'UnaryPOS'),
+            ('SYN', 'SYN*', 'UnarySYN'),
+            ('SYN', 'UnaryPOS', 'POS'),
+            ('SYN', 'UnaryPOS', 'SYN'),
+            ('SYN', 'UnaryPOS', 'UnaryPOS'),
+            ('SYN', 'UnaryPOS', 'UnarySYN'),
+            ('SYN', 'UnarySYN', 'POS'),
+            ('SYN', 'UnarySYN', 'SYN'),
+            ('SYN', 'UnarySYN', 'UnaryPOS'),
+            ('SYN', 'UnarySYN', 'UnarySYN'),
+            ('SYN*', 'POS', 'POS'),
+            ('SYN*', 'POS', 'SYN'),
+            ('SYN*', 'POS', 'UnaryPOS'),
+            ('SYN*', 'POS', 'UnarySYN'),
+            ('SYN*', 'SYN', 'POS'),
+            ('SYN*', 'SYN', 'SYN'),
+            ('SYN*', 'SYN', 'UnaryPOS'),
+            ('SYN*', 'SYN', 'UnarySYN'),
+            ('SYN*', 'SYN*', 'POS'),
+            ('SYN*', 'SYN*', 'SYN'),
+            ('SYN*', 'SYN*', 'UnaryPOS'),
+            ('SYN*', 'SYN*', 'UnarySYN'),
+            ('SYN*', 'UnaryPOS', 'POS'),
+            ('SYN*', 'UnaryPOS', 'SYN'),
+            ('SYN*', 'UnaryPOS', 'UnaryPOS'),
+            ('SYN*', 'UnaryPOS', 'UnarySYN'),
+            ('SYN*', 'UnarySYN', 'POS'),
+            ('SYN*', 'UnarySYN', 'SYN'),
+            ('SYN*', 'UnarySYN', 'UnaryPOS'),
+            ('SYN*', 'UnarySYN', 'UnarySYN'),
+            ('UnaryPOS', 'POS*', 'POS*'),
+            ('UnarySYN', 'POS', 'POS'),
+            ('UnarySYN', 'POS', 'SYN'),
+            ('UnarySYN', 'POS', 'UnaryPOS'),
+            ('UnarySYN', 'POS', 'UnarySYN'),
+            ('UnarySYN', 'SYN', 'POS'),
+            ('UnarySYN', 'SYN', 'SYN'),
+            ('UnarySYN', 'SYN', 'UnaryPOS'),
+            ('UnarySYN', 'SYN', 'UnarySYN'),
+            ('UnarySYN', 'SYN*', 'POS'),
+            ('UnarySYN', 'SYN*', 'SYN'),
+            ('UnarySYN', 'SYN*', 'SYN*'),
+            ('UnarySYN', 'SYN*', 'UnaryPOS'),
+            ('UnarySYN', 'SYN*', 'UnarySYN'),
+            ('UnarySYN', 'UnaryPOS', 'POS'),
+            ('UnarySYN', 'UnaryPOS', 'SYN'),
+            ('UnarySYN', 'UnaryPOS', 'UnaryPOS'),
+            ('UnarySYN', 'UnaryPOS', 'UnarySYN'),
+            ('UnarySYN', 'UnarySYN', 'POS'),
+            ('UnarySYN', 'UnarySYN', 'SYN'),
+            ('UnarySYN', 'UnarySYN', 'UnaryPOS'),
+            ('UnarySYN', 'UnarySYN', 'UnarySYN')
+        ]
 
-        coarse_productions = self.get_coarse_productions(corpus)
+        # (n_coarse, n_coarse, n_coarse)
+        coarse_mask = torch.full((n, n, n),  float('-inf'), dtype=torch.float)
+        # (n_coarse)
+        unary_mask = torch.full((n,), float('-inf'), dtype=torch.float)
+
+        # coarse_productions = self.get_coarse_productions(corpus)
 
         for p in coarse_productions:
             # str to index
             k = label_dict[p[0]]
             i = label_dict[p[1]]
             j = label_dict[p[2]]
-            coarse_mask[i, j, k] = 1
+            coarse_mask[i, j, k] = 0
+
+        for l in ['POS*', 'POS', 'UnaryPOS']:
+            unary_mask[label_dict[l]] = 0
+
+        print(coarse_mask)
+        print(unary_mask)
         
-        return coarse_mask
+        return coarse_mask, unary_mask
 
     def get_coarse_productions(self, corpus):
 
         coarse_productions = set()
+        # unary_productions = set()
         # char-tree un-cnf
         for tree in corpus.trees:
             # cnf
@@ -329,11 +412,12 @@ class SubLabelField(ChartField):
                     continue
                 # list[str]
                 right = [s.symbol() if not isinstance(s, str) else s for s in p.rhs()]
-                # TODO get start mask
                 # A->word
                 if len(right) == 1 and right[0] == 'CHAR':
+                    # if self.fine2coarse_label(left) == 'SYN' or self.fine2coarse_label(left) == 'SYN*':
+                    #     print(p)
+                    # unary_productions.add(self.fine2coarse_label(left))
                     continue
-                # TODO ('POS*', 'SYN', 'UnaryPOS')?
                 # coarse_production
                 p = self.fine2coarse_production(left, right)
                 coarse_productions.add(p)
@@ -371,60 +455,10 @@ class SubLabelField(ChartField):
             (str): coarse-grained label
         """
 
-        idx =  self.get_sublabel_index(label)
+        idx =  self.sublabel_cluster(label)
 
         return self.coarse_labels[idx]
 
-
-    def statistic(self):
-        sub_pos, pos, sub_syn, syn, unary_pos, unary_syn = [], [], [], [], [], []
-        print(len(self.vocab))
-        for label in self.vocab.itos:
-            idx = self.sublabel_cluster(label)
-            if idx == 0:
-                sub_pos.append(label)
-            elif idx == 1:
-                pos.append(label)
-            elif idx == 2:
-                sub_syn.append(label)
-            elif idx == 3:
-                syn.append(label)
-            elif idx == 4:
-                unary_pos.append(label)
-            elif idx == 5:
-                unary_syn.append(label)
-
-        print('------------')
-        print('POS*:')
-        print(len(sub_pos))
-        for l in sub_pos:
-            print(l)
-        print('------------')
-        print('POS:')
-        print(len(pos))
-        for l in pos:
-            print(l)
-        print('------------')
-        print('SYN*:')
-        print(len(sub_syn))
-        for l in sub_syn:
-            print(l)
-        print('------------')
-        print('SYN:')
-        print(len(syn))
-        for l in syn:
-            print(l)
-        print('------------')
-        print('Unary_POS:')
-        print(len(unary_pos))
-        for l in unary_pos:
-            print(l)
-        print('------------')
-        print('Unary_SYN:')
-        print(len(unary_syn))
-        for l in unary_syn:
-            print(l)
-        # exit()
 
     def label_cluster(self, label):
         # fake label 
@@ -484,25 +518,6 @@ class SubLabelField(ChartField):
                 else:
                     return 5
 
-    def get_rules_mask(self):
-
-        coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
-
-        label_dict = {k:v for v, k in enumerate(coarse_labels)}
-
-        sub_pos, pos, sub_syn, syn, unary_pos, unary_syn = coarse_labels
-
-        # coarse productions for left binary trees
-        productions = [
-            (syn, syn, syn),
-            # (syn, syn, pos),
-            (syn, sub_syn, pos),
-            (sub_syn, pos, pos),
-            (sub_syn, )
-        ]
-        
-        return 
-
     def get_label_index(self, label):
         """
         Get label index, if doesn't exist,
@@ -544,10 +559,13 @@ class SubLabelField(ChartField):
             span_chart = torch.full((seq_len, seq_len), -1, dtype=torch.long)
             # pad 0 indicates span(i, j) is not a constituent
             label_chart = torch.full((seq_len, seq_len), -1, dtype=torch.long)
-            sequence = add_child(iter(sequence))[1]
-            for i, j, (left, right, label) in sequence:
-                idx_l, idx_r, idx = self.sublabel_cluster(left), self.sublabel_cluster(right), self.sublabel_cluster(label)
-                span_chart[i, j] = torch.tensor([idx_l, idx_r, idx])
+            # sequence = add_child(iter(sequence))[1]
+            # for i, j, (left, right, label) in sequence:
+            for i, j, label in sequence:
+
+                # idx_l, idx_r, idx = self.sublabel_cluster(left), self.sublabel_cluster(right), self.sublabel_cluster(label)
+                # span_chart[i, j] = torch.tensor([idx_l, idx_r, idx])
+                span_chart[i, j] = self.sublabel_cluster(label)
                 label_chart[i, j] = self.get_label_index(label)
             spans.append(span_chart)
             labels.append(label_chart)
