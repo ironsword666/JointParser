@@ -400,7 +400,7 @@ class SubLabelField(ChartField):
         # (n_coarse)
         unary_mask = torch.full((n,), float('-inf'), dtype=torch.float)
 
-        coarse_productions = self.get_coarse_productions(corpus)
+        # coarse_productions = self.get_coarse_productions(corpus)
 
         for p in coarse_productions:
             # str to index

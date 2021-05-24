@@ -280,7 +280,7 @@ class CMD(object):
             mask = mask & mask.new_ones(seq_len-1, seq_len-1).triu_(1)
             s_span, s_label = self.model(feed_dict)
             if self.args.marg:
-                s_span = crf(s_span, self.transitions, self.start_transitions, mask, marg=True)
+                s_span = crf(s_span, self.transitions, self.start_transitions, mask, marg=True, use_mask=self.args.use_mask)
             preds = self.decode(s_span, s_label, self.transitions, self.start_transitions, mask)
             preds = [build(tree,
                            [(i, j, self.CHART.vocab.itos[label])
@@ -292,7 +292,7 @@ class CMD(object):
 
     def get_loss(self, s_span, s_label, transitions, start_transitions, spans, labels, mask):
         span_mask = spans.ge(0) & mask
-        span_loss, span_probs = crf(s_span, transitions, start_transitions, mask, spans, self.args.marg)
+        span_loss, span_probs = crf(s_span, transitions, start_transitions, mask, spans, self.args.marg, self.args.use_mask)
         label_loss = self.criterion(s_label[span_mask], labels[span_mask])
         loss = span_loss + label_loss 
         # sublabel_loss

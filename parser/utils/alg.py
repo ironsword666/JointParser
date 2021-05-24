@@ -49,7 +49,7 @@ def kmeans(x, k):
 
 
 @torch.enable_grad()
-def crf(scores, transitions, start_transitions, mask, target=None, marg=False):
+def crf(scores, transitions, start_transitions, mask, target=None, marg=False, use_mask=False):
     """[summary]
 
     Args:
@@ -72,12 +72,19 @@ def crf(scores, transitions, start_transitions, mask, target=None, marg=False):
     # requires_grad_(requires_grad=True):
     # Change if autograd should record operations on scores: 
     #   sets scores’s requires_grad attribute in-place. Returns this tensor.
-    # (seq_len, seq_len, B)
-    s = inside(scores.requires_grad_(), transitions, start_transitions, mask)
-    lens = lens.view(1, 1, batch_size).expand([-1, n_labels, -1])
-    # get alpha(0, length, l) for each sentence
-    # (seq_len, n_labels, B).gather(0, Tensor(1, B)) -> Tensor(1, B)
-    logZ = s[0].gather(0, lens).logsumexp(-2).sum()
+    if use_mask:
+        # (seq_len, seq_len, B)
+        s = inside_mask(scores.requires_grad_(), transitions, start_transitions, mask)
+        # (1, n_labels, batch_size)
+        lens = lens.view(1, 1, batch_size).expand([-1, n_labels, -1])
+        # get alpha(0, length, l) for each sentence
+        # (seq_len, n_labels, B).gather(0, Tensor(1, B)) -> Tensor(1, B)
+        logZ = s[0].gather(0, lens).logsumexp(-2).sum()
+    else:
+        s = inside_simple(scores.requires_grad_(), mask)
+        # get alpha(0, length, l) for each sentence
+        # (seq_len, B).gather(0, Tensor(1, B)) -> Tensor(1, B)
+        logZ = s[0].gather(0, lens.unsqueeze(0)).sum()
     # marginal probs are used for decoding, and can be computed by
     # combining the inside algorithm and autograd mechanism
     # instead of the entire inside-outside process.
@@ -101,63 +108,63 @@ def crf(scores, transitions, start_transitions, mask, target=None, marg=False):
     loss = (logZ - scores.gather(1, target).sum()) / total
     return loss, probs
 
-# def inside(scores, mask):
-#     """Simple inside algorithm as supar.
+def inside_simple(scores, mask):
+    """Simple inside algorithm as supar.
 
-#     Args:
-#         scores (Tensor(B, seq_len, seq_len, n_labels))
-#         trans_mask (Tensor(n_labels, n_labels, n_labels)): boolen value
-#             (i, j, k) == 0 indicates k->ij is impossible
-#             (i, j, k) == 1 indicates k->ij is possible
-#         mask (Tensor(B, seq_len, seq_len))
+    Args:
+        scores (Tensor(B, seq_len, seq_len, n_labels))
+        trans_mask (Tensor(n_labels, n_labels, n_labels)): boolen value
+            (i, j, k) == 0 indicates k->ij is impossible
+            (i, j, k) == 1 indicates k->ij is possible
+        mask (Tensor(B, seq_len, seq_len))
 
-#     Returns:
-#         Tensor: [seq_len, seq_len, n_labels, batch_size]
-#     """
-#     # [batch_size, seq_len, seq_len]
-#     scores = scores.logsumexp(-1)
-#     batch_size, seq_len, seq_len = scores.shape
-#     # permute is convenient for diagonal which acts on dim1=0 and dim2=1
-#     # [seq_len, seq_len, batch_size]
-#     scores, mask = scores.permute(1, 2, 0), mask.permute(1, 2, 0)
-#     # s[i, j]: sub-tree spanning from i to j
-#     # [seq_len, seq_len, batch_size]
-#     s = torch.full_like(scores, float('-inf'))
+    Returns:
+        Tensor: [seq_len, seq_len, n_labels, batch_size]
+    """
+    # [batch_size, seq_len, seq_len]
+    scores = scores.logsumexp(-1)
+    batch_size, seq_len, seq_len = scores.shape
+    # permute is convenient for diagonal which acts on dim1=0 and dim2=1
+    # [seq_len, seq_len, batch_size]
+    scores, mask = scores.permute(1, 2, 0), mask.permute(1, 2, 0)
+    # s[i, j]: sub-tree spanning from i to j
+    # [seq_len, seq_len, batch_size]
+    s = torch.full_like(scores, float('-inf'))
 
-#     for w in range(1, seq_len):
-#         # n denotes the number of spans to iterate,
-#         # from span (0, w) to span (n, n+w) given width w
-#         n = seq_len - w
-#         # diag_mask is used for ignoring the excess of each sentence
-#         # [batch_size, n]
-#         # diag_mask = mask.diagonal(w)
+    for w in range(1, seq_len):
+        # n denotes the number of spans to iterate,
+        # from span (0, w) to span (n, n+w) given width w
+        n = seq_len - w
+        # diag_mask is used for ignoring the excess of each sentence
+        # [batch_size, n]
+        # diag_mask = mask.diagonal(w)
 
-#         if w == 1:
-#             # scores.diagonal(w): [n_labels, batch_size, n]
-#             # scores.diagonal(w).permute(1, 2, 0)[diag_mask]: (T, n_labels)
-#             # s.diagonal(w).permute(1, 2, 0)[diag_mask] = scores.diagonal(w).permute(1, 2, 0)[diag_mask]
-#             # no need  diag_mask
-#             # [n_labels, batch_size]
-#             s.diagonal(w).copy_(scores.diagonal(w))
-#             continue 
+        if w == 1:
+            # scores.diagonal(w): [n_labels, batch_size, n]
+            # scores.diagonal(w).permute(1, 2, 0)[diag_mask]: (T, n_labels)
+            # s.diagonal(w).permute(1, 2, 0)[diag_mask] = scores.diagonal(w).permute(1, 2, 0)[diag_mask]
+            # no need  diag_mask
+            # [n_labels, batch_size]
+            s.diagonal(w).copy_(scores.diagonal(w))
+            continue 
         
-#         # scores for sub-tree spanning from `i to k` and `k+1 to j`, considering all labels
-#         # NOTE: stripe considering all split points and spans with same width
-#         # stripe: [n, w-1, batch_size] 
-#         s_span = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
-#         # [batch_size, n, w-1]
-#         s_span = s_span.permute(2, 0, 1)
-#         if s_span.requires_grad:
-#             s_span.register_hook(lambda x: x.masked_fill_(torch.isnan(x), 0))
-#         # [batch_size, n]
-#         s_span = s_span.logsumexp(-1)
-#         # [batch_size, n] = [batch_size, n] +  [batch_size, n]
-#         s.diagonal(w).copy_(s_span + scores.diagonal(w))
+        # scores for sub-tree spanning from `i to k` and `k+1 to j`, considering all labels
+        # NOTE: stripe considering all split points and spans with same width
+        # stripe: [n, w-1, batch_size] 
+        s_span = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
+        # [batch_size, n, w-1]
+        s_span = s_span.permute(2, 0, 1)
+        if s_span.requires_grad:
+            s_span.register_hook(lambda x: x.masked_fill_(torch.isnan(x), 0))
+        # [batch_size, n]
+        s_span = s_span.logsumexp(-1)
+        # [batch_size, n] = [batch_size, n] +  [batch_size, n]
+        s.diagonal(w).copy_(s_span + scores.diagonal(w))
 
-#     # [seq_len, seq_len, batch_size]
-#     return s
+    # [seq_len, seq_len, batch_size]
+    return s
 
-def inside(scores, transitions, start_transitions, mask):
+def inside_mask(scores, transitions, start_transitions, mask):
     batch_size, seq_len, seq_len, n_labels = scores.shape
     # [seq_len, seq_len, n_labels, batch_size]
     scores = scores.permute(1, 2, 3, 0)
@@ -214,7 +221,6 @@ def inside(scores, transitions, start_transitions, mask):
         diag_s.copy_(s_span)
 
     return s
-
 
 
 def cky(scores, transitions, start_transitions, mask):
