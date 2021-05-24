@@ -289,7 +289,8 @@ class SubLabelField(ChartField):
         counter |= meta_labels
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
 
-        self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
+        # self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
+        self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN']
 
         # mask tensor
         self.coarse_mask, self.unary_mask = self.get_coarse_mask(corpus)
@@ -303,81 +304,103 @@ class SubLabelField(ChartField):
 
         coarse_productions = [
             # ('POS', 'POS', 'SYN'),
+            # ('POS', 'POS*', 'POS'),
             ('POS', 'POS*', 'POS*'),
-            # ('POS', 'POS*', 'UnaryPOS'),
-            # ('POS', 'SYN', 'UnaryPOS'),
+            # ('POS', 'SYN', 'POS'),
             ('POS*', 'POS*', 'POS*'),
-            # ('POS*', 'SYN', 'UnaryPOS'),
+            # ('POS*', 'SYN', 'POS'),
             ('SYN', 'POS', 'POS'),
             ('SYN', 'POS', 'SYN'),
-            ('SYN', 'POS', 'UnaryPOS'),
-            ('SYN', 'POS', 'UnarySYN'),
             ('SYN', 'SYN', 'POS'),
             ('SYN', 'SYN', 'SYN'),
-            ('SYN', 'SYN', 'UnaryPOS'),
-            ('SYN', 'SYN', 'UnarySYN'),
             ('SYN', 'SYN*', 'POS'),
             ('SYN', 'SYN*', 'SYN'),
-            ('SYN', 'SYN*', 'UnaryPOS'),
-            ('SYN', 'SYN*', 'UnarySYN'),
-            ('SYN', 'UnaryPOS', 'POS'),
-            ('SYN', 'UnaryPOS', 'SYN'),
-            ('SYN', 'UnaryPOS', 'UnaryPOS'),
-            ('SYN', 'UnaryPOS', 'UnarySYN'),
-            ('SYN', 'UnarySYN', 'POS'),
-            ('SYN', 'UnarySYN', 'SYN'),
-            ('SYN', 'UnarySYN', 'UnaryPOS'),
-            ('SYN', 'UnarySYN', 'UnarySYN'),
+            ('SYN', 'SYN*', 'SYN*'),
             ('SYN*', 'POS', 'POS'),
             ('SYN*', 'POS', 'SYN'),
-            ('SYN*', 'POS', 'UnaryPOS'),
-            ('SYN*', 'POS', 'UnarySYN'),
             ('SYN*', 'SYN', 'POS'),
             ('SYN*', 'SYN', 'SYN'),
-            ('SYN*', 'SYN', 'UnaryPOS'),
-            ('SYN*', 'SYN', 'UnarySYN'),
             ('SYN*', 'SYN*', 'POS'),
-            ('SYN*', 'SYN*', 'SYN'),
-            ('SYN*', 'SYN*', 'UnaryPOS'),
-            ('SYN*', 'SYN*', 'UnarySYN'),
-            ('SYN*', 'UnaryPOS', 'POS'),
-            ('SYN*', 'UnaryPOS', 'SYN'),
-            ('SYN*', 'UnaryPOS', 'UnaryPOS'),
-            ('SYN*', 'UnaryPOS', 'UnarySYN'),
-            ('SYN*', 'UnarySYN', 'POS'),
-            ('SYN*', 'UnarySYN', 'SYN'),
-            ('SYN*', 'UnarySYN', 'UnaryPOS'),
-            ('SYN*', 'UnarySYN', 'UnarySYN'),
-            ('UnaryPOS', 'POS*', 'POS*'),
-            ('UnarySYN', 'POS', 'POS'),
-            ('UnarySYN', 'POS', 'SYN'),
-            ('UnarySYN', 'POS', 'UnaryPOS'),
-            ('UnarySYN', 'POS', 'UnarySYN'),
-            ('UnarySYN', 'SYN', 'POS'),
-            ('UnarySYN', 'SYN', 'SYN'),
-            ('UnarySYN', 'SYN', 'UnaryPOS'),
-            ('UnarySYN', 'SYN', 'UnarySYN'),
-            ('UnarySYN', 'SYN*', 'POS'),
-            ('UnarySYN', 'SYN*', 'SYN'),
-            ('UnarySYN', 'SYN*', 'SYN*'),
-            ('UnarySYN', 'SYN*', 'UnaryPOS'),
-            ('UnarySYN', 'SYN*', 'UnarySYN'),
-            ('UnarySYN', 'UnaryPOS', 'POS'),
-            ('UnarySYN', 'UnaryPOS', 'SYN'),
-            ('UnarySYN', 'UnaryPOS', 'UnaryPOS'),
-            ('UnarySYN', 'UnaryPOS', 'UnarySYN'),
-            ('UnarySYN', 'UnarySYN', 'POS'),
-            ('UnarySYN', 'UnarySYN', 'SYN'),
-            ('UnarySYN', 'UnarySYN', 'UnaryPOS'),
-            ('UnarySYN', 'UnarySYN', 'UnarySYN')
+            ('SYN*', 'SYN*', 'SYN')
         ]
+
+        # coarse_productions = [
+        #     # ('POS', 'POS', 'SYN'),
+        #     ('POS', 'POS*', 'POS*'),
+        #     # ('POS', 'POS*', 'UnaryPOS'),
+        #     # ('POS', 'SYN', 'UnaryPOS'),
+        #     ('POS*', 'POS*', 'POS*'),
+        #     # ('POS*', 'SYN', 'UnaryPOS'),
+        #     ('SYN', 'POS', 'POS'),
+        #     ('SYN', 'POS', 'SYN'),
+        #     ('SYN', 'POS', 'UnaryPOS'),
+        #     ('SYN', 'POS', 'UnarySYN'),
+        #     ('SYN', 'SYN', 'POS'),
+        #     ('SYN', 'SYN', 'SYN'),
+        #     ('SYN', 'SYN', 'UnaryPOS'),
+        #     ('SYN', 'SYN', 'UnarySYN'),
+        #     ('SYN', 'SYN*', 'POS'),
+        #     ('SYN', 'SYN*', 'SYN'),
+        #     ('SYN', 'SYN*', 'UnaryPOS'),
+        #     ('SYN', 'SYN*', 'UnarySYN'),
+        #     ('SYN', 'UnaryPOS', 'POS'),
+        #     ('SYN', 'UnaryPOS', 'SYN'),
+        #     ('SYN', 'UnaryPOS', 'UnaryPOS'),
+        #     ('SYN', 'UnaryPOS', 'UnarySYN'),
+        #     ('SYN', 'UnarySYN', 'POS'),
+        #     ('SYN', 'UnarySYN', 'SYN'),
+        #     ('SYN', 'UnarySYN', 'UnaryPOS'),
+        #     ('SYN', 'UnarySYN', 'UnarySYN'),
+        #     ('SYN*', 'POS', 'POS'),
+        #     ('SYN*', 'POS', 'SYN'),
+        #     ('SYN*', 'POS', 'UnaryPOS'),
+        #     ('SYN*', 'POS', 'UnarySYN'),
+        #     ('SYN*', 'SYN', 'POS'),
+        #     ('SYN*', 'SYN', 'SYN'),
+        #     ('SYN*', 'SYN', 'UnaryPOS'),
+        #     ('SYN*', 'SYN', 'UnarySYN'),
+        #     ('SYN*', 'SYN*', 'POS'),
+        #     ('SYN*', 'SYN*', 'SYN'),
+        #     ('SYN*', 'SYN*', 'UnaryPOS'),
+        #     ('SYN*', 'SYN*', 'UnarySYN'),
+        #     ('SYN*', 'UnaryPOS', 'POS'),
+        #     ('SYN*', 'UnaryPOS', 'SYN'),
+        #     ('SYN*', 'UnaryPOS', 'UnaryPOS'),
+        #     ('SYN*', 'UnaryPOS', 'UnarySYN'),
+        #     ('SYN*', 'UnarySYN', 'POS'),
+        #     ('SYN*', 'UnarySYN', 'SYN'),
+        #     ('SYN*', 'UnarySYN', 'UnaryPOS'),
+        #     ('SYN*', 'UnarySYN', 'UnarySYN'),
+        #     ('UnaryPOS', 'POS*', 'POS*'),
+        #     ('UnarySYN', 'POS', 'POS'),
+        #     ('UnarySYN', 'POS', 'SYN'),
+        #     ('UnarySYN', 'POS', 'UnaryPOS'),
+        #     ('UnarySYN', 'POS', 'UnarySYN'),
+        #     ('UnarySYN', 'SYN', 'POS'),
+        #     ('UnarySYN', 'SYN', 'SYN'),
+        #     ('UnarySYN', 'SYN', 'UnaryPOS'),
+        #     ('UnarySYN', 'SYN', 'UnarySYN'),
+        #     ('UnarySYN', 'SYN*', 'POS'),
+        #     ('UnarySYN', 'SYN*', 'SYN'),
+        #     ('UnarySYN', 'SYN*', 'SYN*'),
+        #     ('UnarySYN', 'SYN*', 'UnaryPOS'),
+        #     ('UnarySYN', 'SYN*', 'UnarySYN'),
+        #     ('UnarySYN', 'UnaryPOS', 'POS'),
+        #     ('UnarySYN', 'UnaryPOS', 'SYN'),
+        #     ('UnarySYN', 'UnaryPOS', 'UnaryPOS'),
+        #     ('UnarySYN', 'UnaryPOS', 'UnarySYN'),
+        #     ('UnarySYN', 'UnarySYN', 'POS'),
+        #     ('UnarySYN', 'UnarySYN', 'SYN'),
+        #     ('UnarySYN', 'UnarySYN', 'UnaryPOS'),
+        #     ('UnarySYN', 'UnarySYN', 'UnarySYN')
+        # ]
 
         # (n_coarse, n_coarse, n_coarse)
         coarse_mask = torch.full((n, n, n),  float('-inf'), dtype=torch.float)
         # (n_coarse)
         unary_mask = torch.full((n,), float('-inf'), dtype=torch.float)
 
-        # coarse_productions = self.get_coarse_productions(corpus)
+        coarse_productions = self.get_coarse_productions(corpus)
 
         for p in coarse_productions:
             # str to index
@@ -386,11 +409,13 @@ class SubLabelField(ChartField):
             j = label_dict[p[2]]
             coarse_mask[i, j, k] = 0
 
-        for l in ['POS*', 'POS', 'UnaryPOS']:
+        # for l in ['POS*', 'POS', 'UnaryPOS']:
+        for l in ['POS*', 'POS']:
+
             unary_mask[label_dict[l]] = 0
 
-        print(coarse_mask)
-        print(unary_mask)
+        # print(coarse_mask)
+        # print(unary_mask)
         
         return coarse_mask, unary_mask
 
@@ -420,6 +445,10 @@ class SubLabelField(ChartField):
                     continue
                 # coarse_production
                 p = self.fine2coarse_production(left, right)
+
+                # if p[0] == 'SYN' and p[1] == 'POS' and p[2] == 'SYN':
+                    # print(left, right)
+                    # tree.pretty_print()
                 coarse_productions.add(p)
 
         coarse_productions = list(coarse_productions)
@@ -489,7 +518,7 @@ class SubLabelField(ChartField):
             [int]: 1,2,3,4 for POS*, POS, SYN*, SYN
         """
         if label is None:
-            return 6
+            return 4
         # dummy label
         if label.endswith("|<>"):
             label = label[:-3].split("+")[-1]
@@ -502,21 +531,27 @@ class SubLabelField(ChartField):
         else:
             
             label = label.split("+")
-            if len(label) == 1:
-                # POS
-                if label[-1] in pos_label:
-                    return 1
-                # SYN
-                else:
-                    return 3
-            # check unary rule
+            # POS
+            if label[-1] in pos_label:
+                return 1
+            # SYN
             else:
-                # SYNs+POS
-                if label[-1] in pos_label:
-                    return 4
-                # SYNs+SYN
-                else:
-                    return 5
+                return 3
+            # if len(label) == 1:
+            #     # POS
+            #     if label[-1] in pos_label:
+            #         return 1
+            #     # SYN
+            #     else:
+            #         return 3
+            # # check unary rule
+            # else:
+            #     # SYNs+POS
+            #     if label[-1] in pos_label:
+            #         return 4
+            #     # SYNs+SYN
+            #     else:
+            #         return 5
 
     def get_label_index(self, label):
         """
