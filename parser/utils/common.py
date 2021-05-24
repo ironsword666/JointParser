@@ -23,7 +23,7 @@ coarse_productions = [
     ('SYN', 'SYN', 'SYN'),
     ('SYN', 'SYN*', 'POS'),
     ('SYN', 'SYN*', 'SYN'),
-    ('SYN', 'SYN*', 'SYN*'),
+    # ('SYN', 'SYN*', 'SYN*'),
     ('SYN*', 'POS', 'POS'),
     ('SYN*', 'POS', 'SYN'),
     ('SYN*', 'SYN', 'POS'),
