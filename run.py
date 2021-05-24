@@ -42,8 +42,10 @@ if __name__ == '__main__':
                                help='whether to use marginal probs')
         subparser.add_argument('--constrained_label', action='store_true',
                                 help='whether to use constrained label strategy')
-        subparser.add_argument('--use_mask', action='store_true',
+        subparser.add_argument('--mask_inside', action='store_true',
                                 help='whether to mask wrong tree in inside')
+        subparser.add_argument('--mask_cky', action='store_true',
+                                help='whether to mask wrong tree in cky')
         subparser.add_argument('--alpha', default=4, type=int,
                                 help='coefficient to balance cws grain size')
             

@@ -49,7 +49,7 @@ def kmeans(x, k):
 
 
 @torch.enable_grad()
-def crf(scores, transitions, start_transitions, mask, target=None, marg=False, use_mask=False):
+def crf(scores, transitions, start_transitions, mask, target=None, marg=False, mask_inside=False):
     """[summary]
 
     Args:
@@ -72,7 +72,7 @@ def crf(scores, transitions, start_transitions, mask, target=None, marg=False, u
     # requires_grad_(requires_grad=True):
     # Change if autograd should record operations on scores: 
     #   sets scores’s requires_grad attribute in-place. Returns this tensor.
-    if use_mask:
+    if mask_inside:
         # (seq_len, seq_len, B)
         s = inside_mask(scores.requires_grad_(), transitions, start_transitions, mask)
         # (1, n_labels, batch_size)
@@ -211,6 +211,7 @@ def inside_mask(scores, transitions, start_transitions, mask):
 
         if s_span.requires_grad:
             s_span.register_hook(lambda x: x.masked_fill_(torch.isnan(x), 0))
+            
         # [batch_size, n, n_labels]
         s_span = s_span.logsumexp([2, 3, 4])
 
@@ -223,7 +224,7 @@ def inside_mask(scores, transitions, start_transitions, mask):
     return s
 
 
-def cky(scores, transitions, start_transitions, mask):
+def cky_mask(scores, transitions, start_transitions, mask):
     """[summary]
 
     Args:
@@ -297,72 +298,72 @@ def cky(scores, transitions, start_transitions, mask):
 
     return trees
 
-# def cky(scores, mask):
-#     """
-#     We can use max labels score as span's score,
-#     then use the same cky as two-stage.
+def cky_simple(scores, mask):
+    """
+    We can use max labels score as span's score,
+    then use the same cky as two-stage.
 
-#     When backtracking, we get label as well.
+    When backtracking, we get label as well.
 
-#     Args:
-#         scores (Tensor(B, seq_len, seq_len, n_labels))
-#         mask (Tensor(B, seq_len, seq_len))
+    Args:
+        scores (Tensor(B, seq_len, seq_len, n_labels))
+        mask (Tensor(B, seq_len, seq_len))
 
-#     Returns:
-#         [[(i, j, l), ...], ...]
-#     """
-#     lens = mask[:, 0].sum(-1)
-#     # (B, seq_len, seq_len)
-#     scores, labels = scores.max(-1)
-#     # [seq_len, seq_len, batch_size]
-#     scores = scores.permute(1, 2, 0)
-#     seq_len, seq_len, batch_size = scores.shape
-#     s = scores.new_zeros(seq_len, seq_len, batch_size)
-#     p = scores.new_zeros(seq_len, seq_len, batch_size).long()
+    Returns:
+        [[(i, j, l), ...], ...]
+    """
+    lens = mask[:, 0].sum(-1)
+    # (B, seq_len, seq_len)
+    scores, labels = scores.max(-1)
+    # [seq_len, seq_len, batch_size]
+    scores = scores.permute(1, 2, 0)
+    seq_len, seq_len, batch_size = scores.shape
+    s = scores.new_zeros(seq_len, seq_len, batch_size)
+    p = scores.new_zeros(seq_len, seq_len, batch_size).long()
 
-#     for w in range(1, seq_len):
-#         n = seq_len - w
-#         # (1, n)
-#         starts = p.new_tensor(range(n)).unsqueeze(0)
+    for w in range(1, seq_len):
+        n = seq_len - w
+        # (1, n)
+        starts = p.new_tensor(range(n)).unsqueeze(0)
 
-#         if w == 1:
-#             # scores.diagonal(w): [batch_size, n]
-#             s.diagonal(w).copy_(scores.diagonal(w))
-#             continue
+        if w == 1:
+            # scores.diagonal(w): [batch_size, n]
+            s.diagonal(w).copy_(scores.diagonal(w))
+            continue
 
-#         # [n, w-1, batch_size] 
-#         s_span = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
-#         # [batch_size, n, w]
-#         s_span = s_span.permute(2, 0, 1)
-#         # [batch_size, n]
-#         s_span, p_span = s_span.max(-1)
-#         s.diagonal(w).copy_(s_span + scores.diagonal(w))
-#         p.diagonal(w).copy_(p_span + starts + 1)
+        # [n, w-1, batch_size] 
+        s_span = stripe(s, n, w-1, (0, 1)) + stripe(s, n, w-1, (1, w), 0)
+        # [batch_size, n, w]
+        s_span = s_span.permute(2, 0, 1)
+        # [batch_size, n]
+        s_span, p_span = s_span.max(-1)
+        s.diagonal(w).copy_(s_span + scores.diagonal(w))
+        p.diagonal(w).copy_(p_span + starts + 1)
 
-#     def backtrack(p, i, j, labels):
-#         """span(i, j, l)
+    def backtrack(p, i, j, labels):
+        """span(i, j, l)
 
-#         Args:
-#             p (List[List]): backtrack points.
-#             labels (List[List]: [description]
+        Args:
+            p (List[List]): backtrack points.
+            labels (List[List]: [description]
 
-#         Returns:
-#             [type]: [description]
-#         """
-#         if j == i + 1:
-#             return [(i, j, labels[i][j])]
-#         split = p[i][j]
-#         ltree = backtrack(p, i, split, labels)
-#         rtree = backtrack(p, split, j, labels)
-#         # top-down, [(0, 9), (0, 6), (0, 3), ]
-#         return [(i, j, labels[i][j])] + ltree + rtree
+        Returns:
+            [type]: [description]
+        """
+        if j == i + 1:
+            return [(i, j, labels[i][j])]
+        split = p[i][j]
+        ltree = backtrack(p, i, split, labels)
+        rtree = backtrack(p, split, j, labels)
+        # top-down, [(0, 9), (0, 6), (0, 3), ]
+        return [(i, j, labels[i][j])] + ltree + rtree
 
-#     p = p.permute(2, 0, 1).tolist()
-#     labels = labels.tolist()
-#     trees = [backtrack(p[i], 0, length, labels[i])
-#              for i, length in enumerate(lens.tolist())]
+    p = p.permute(2, 0, 1).tolist()
+    labels = labels.tolist()
+    trees = [backtrack(p[i], 0, length, labels[i])
+             for i, length in enumerate(lens.tolist())]
 
-#     return trees
+    return trees
 
 
 

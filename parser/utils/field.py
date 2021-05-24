@@ -293,107 +293,14 @@ class SubLabelField(ChartField):
         self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN']
 
         # mask tensor
-        self.coarse_mask, self.unary_mask = self.get_coarse_mask(corpus)
+        # self.coarse_mask, self.unary_mask = self.get_coarse_mask(corpus)
 
 
-    def get_coarse_mask(self, corpus):
+    def get_coarse_mask(self, coarse_productions, corpus=None):
 
         label_dict = {k : v for v, k in enumerate(self.coarse_labels)}
 
         n = len(self.coarse_labels)
-
-        coarse_productions = [
-            # ('POS', 'POS', 'SYN'),
-            # ('POS', 'POS*', 'POS'),
-            ('POS', 'POS*', 'POS*'),
-            # ('POS', 'SYN', 'POS'),
-            ('POS*', 'POS*', 'POS*'),
-            # ('POS*', 'SYN', 'POS'),
-            ('SYN', 'POS', 'POS'),
-            ('SYN', 'POS', 'SYN'),
-            ('SYN', 'SYN', 'POS'),
-            ('SYN', 'SYN', 'SYN'),
-            ('SYN', 'SYN*', 'POS'),
-            ('SYN', 'SYN*', 'SYN'),
-            ('SYN', 'SYN*', 'SYN*'),
-            ('SYN*', 'POS', 'POS'),
-            ('SYN*', 'POS', 'SYN'),
-            ('SYN*', 'SYN', 'POS'),
-            ('SYN*', 'SYN', 'SYN'),
-            ('SYN*', 'SYN*', 'POS'),
-            ('SYN*', 'SYN*', 'SYN')
-        ]
-
-        # coarse_productions = [
-        #     # ('POS', 'POS', 'SYN'),
-        #     ('POS', 'POS*', 'POS*'),
-        #     # ('POS', 'POS*', 'UnaryPOS'),
-        #     # ('POS', 'SYN', 'UnaryPOS'),
-        #     ('POS*', 'POS*', 'POS*'),
-        #     # ('POS*', 'SYN', 'UnaryPOS'),
-        #     ('SYN', 'POS', 'POS'),
-        #     ('SYN', 'POS', 'SYN'),
-        #     ('SYN', 'POS', 'UnaryPOS'),
-        #     ('SYN', 'POS', 'UnarySYN'),
-        #     ('SYN', 'SYN', 'POS'),
-        #     ('SYN', 'SYN', 'SYN'),
-        #     ('SYN', 'SYN', 'UnaryPOS'),
-        #     ('SYN', 'SYN', 'UnarySYN'),
-        #     ('SYN', 'SYN*', 'POS'),
-        #     ('SYN', 'SYN*', 'SYN'),
-        #     ('SYN', 'SYN*', 'UnaryPOS'),
-        #     ('SYN', 'SYN*', 'UnarySYN'),
-        #     ('SYN', 'UnaryPOS', 'POS'),
-        #     ('SYN', 'UnaryPOS', 'SYN'),
-        #     ('SYN', 'UnaryPOS', 'UnaryPOS'),
-        #     ('SYN', 'UnaryPOS', 'UnarySYN'),
-        #     ('SYN', 'UnarySYN', 'POS'),
-        #     ('SYN', 'UnarySYN', 'SYN'),
-        #     ('SYN', 'UnarySYN', 'UnaryPOS'),
-        #     ('SYN', 'UnarySYN', 'UnarySYN'),
-        #     ('SYN*', 'POS', 'POS'),
-        #     ('SYN*', 'POS', 'SYN'),
-        #     ('SYN*', 'POS', 'UnaryPOS'),
-        #     ('SYN*', 'POS', 'UnarySYN'),
-        #     ('SYN*', 'SYN', 'POS'),
-        #     ('SYN*', 'SYN', 'SYN'),
-        #     ('SYN*', 'SYN', 'UnaryPOS'),
-        #     ('SYN*', 'SYN', 'UnarySYN'),
-        #     ('SYN*', 'SYN*', 'POS'),
-        #     ('SYN*', 'SYN*', 'SYN'),
-        #     ('SYN*', 'SYN*', 'UnaryPOS'),
-        #     ('SYN*', 'SYN*', 'UnarySYN'),
-        #     ('SYN*', 'UnaryPOS', 'POS'),
-        #     ('SYN*', 'UnaryPOS', 'SYN'),
-        #     ('SYN*', 'UnaryPOS', 'UnaryPOS'),
-        #     ('SYN*', 'UnaryPOS', 'UnarySYN'),
-        #     ('SYN*', 'UnarySYN', 'POS'),
-        #     ('SYN*', 'UnarySYN', 'SYN'),
-        #     ('SYN*', 'UnarySYN', 'UnaryPOS'),
-        #     ('SYN*', 'UnarySYN', 'UnarySYN'),
-        #     ('UnaryPOS', 'POS*', 'POS*'),
-        #     ('UnarySYN', 'POS', 'POS'),
-        #     ('UnarySYN', 'POS', 'SYN'),
-        #     ('UnarySYN', 'POS', 'UnaryPOS'),
-        #     ('UnarySYN', 'POS', 'UnarySYN'),
-        #     ('UnarySYN', 'SYN', 'POS'),
-        #     ('UnarySYN', 'SYN', 'SYN'),
-        #     ('UnarySYN', 'SYN', 'UnaryPOS'),
-        #     ('UnarySYN', 'SYN', 'UnarySYN'),
-        #     ('UnarySYN', 'SYN*', 'POS'),
-        #     ('UnarySYN', 'SYN*', 'SYN'),
-        #     ('UnarySYN', 'SYN*', 'SYN*'),
-        #     ('UnarySYN', 'SYN*', 'UnaryPOS'),
-        #     ('UnarySYN', 'SYN*', 'UnarySYN'),
-        #     ('UnarySYN', 'UnaryPOS', 'POS'),
-        #     ('UnarySYN', 'UnaryPOS', 'SYN'),
-        #     ('UnarySYN', 'UnaryPOS', 'UnaryPOS'),
-        #     ('UnarySYN', 'UnaryPOS', 'UnarySYN'),
-        #     ('UnarySYN', 'UnarySYN', 'POS'),
-        #     ('UnarySYN', 'UnarySYN', 'SYN'),
-        #     ('UnarySYN', 'UnarySYN', 'UnaryPOS'),
-        #     ('UnarySYN', 'UnarySYN', 'UnarySYN')
-        # ]
 
         # (n_coarse, n_coarse, n_coarse)
         coarse_mask = torch.full((n, n, n),  float('-inf'), dtype=torch.float)
