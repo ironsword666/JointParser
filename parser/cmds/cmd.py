@@ -203,7 +203,7 @@ class CMD(object):
             # (B, seq_len-1, seq_len-1), (B, seq_len-1, seq_len-1, n_labels)
             s_span, s_label = self.model(feed_dict)
             # crf-loss + cross-entropy-loss
-            loss, _ = self.get_loss(s_span, s_label, self.transitions, self.start_transitions, spans, labels, mask, self.args.marg, mask_inside=False)
+            loss, _ = self.get_loss(s_span, s_label, self.transitions, self.start_transitions, spans, labels, mask, self.args.marg, self.args.mask_inside)
             loss.backward()
             nn.utils.clip_grad_norm_(self.model.parameters(),
                                      self.args.clip)
