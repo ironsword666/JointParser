@@ -290,7 +290,7 @@ class SubLabelField(ChartField):
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
 
         # self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
-        self.coarse_labels = ['POS*', 'POS', 'SYN']
+        self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN']
 
         # mask tensor
         # self.coarse_mask, self.unary_mask = self.get_coarse_mask(corpus)
@@ -425,7 +425,7 @@ class SubLabelField(ChartField):
             [int]: 1,2,3,4 for POS*, POS, SYN*, SYN
         """
         if label is None:
-            return 3
+            return 4
         # dummy label
         if label.endswith("|<>"):
             label = label[:-3].split("+")[-1]
@@ -443,7 +443,7 @@ class SubLabelField(ChartField):
                 return 1
             # SYN
             else:
-                return 2
+                return 3
             # if len(label) == 1:
             #     # POS
             #     if label[-1] in pos_label:
