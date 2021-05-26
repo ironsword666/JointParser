@@ -290,7 +290,7 @@ class SubLabelField(ChartField):
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
 
         # self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
-        self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN']
+        self.coarse_labels = ['POS*', 'POS', 'SYN']
 
         # mask tensor
         # self.coarse_mask, self.unary_mask = self.get_coarse_mask(corpus)
@@ -425,7 +425,7 @@ class SubLabelField(ChartField):
             [int]: 1,2,3,4 for POS*, POS, SYN*, SYN
         """
         if label is None:
-            return 4
+            return 3
         # dummy label
         if label.endswith("|<>"):
             label = label[:-3].split("+")[-1]
@@ -443,7 +443,7 @@ class SubLabelField(ChartField):
                 return 1
             # SYN
             else:
-                return 3
+                return 2
             # if len(label) == 1:
             #     # POS
             #     if label[-1] in pos_label:
@@ -504,7 +504,6 @@ class SubLabelField(ChartField):
             # sequence = add_child(iter(sequence))[1]
             # for i, j, (left, right, label) in sequence:
             for i, j, label in sequence:
-
                 # idx_l, idx_r, idx = self.sublabel_cluster(left), self.sublabel_cluster(right), self.sublabel_cluster(label)
                 # span_chart[i, j] = torch.tensor([idx_l, idx_r, idx])
                 span_chart[i, j] = self.sublabel_cluster(label)

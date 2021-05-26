@@ -347,7 +347,7 @@ class CMD(object):
         # NOTE: [..., 1:, :] is used to mask first unk label, which shouldn't participate in max
         # NOTE: max(-2) and corase is used to get max labels of three sub-labels: POS*, POS, SYN/SYN*
         # pred_values, pred_labels = (B, seq_len, seq_len, 4), (B, seq_len, seq_len, 4)
-        _, pred_labels = (s_label.view(batch_size, seq_len, seq_len, label_size, 1) + corase.view(1, 1, 1, label_size, self.args.n_sublabels)).max(-2)
+        pred_labels = (s_label.view(batch_size, seq_len, seq_len, label_size, 1) + corase.view(1, 1, 1, label_size, self.args.n_sublabels)).argmax(-2)
 
         preds = [[(i, j, labels[i][j][l]) for i, j, l in spans]
                 for spans, labels in zip(pred_spans, pred_labels)]
