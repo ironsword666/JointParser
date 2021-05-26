@@ -32,6 +32,10 @@ coarse_productions = [
     ('SYN*', 'SYN*', 'SYN')
 ]
 
+# ==================
+#  from ctb51-big. modified by ctb7
+# ==================
+
 # coarse_productions = [
 #     # ('POS', 'POS', 'SYN'),
 #     ('POS', 'POS*', 'POS*'),
@@ -90,7 +94,7 @@ coarse_productions = [
 #     ('UnarySYN', 'SYN', 'UnarySYN'),
 #     ('UnarySYN', 'SYN*', 'POS'),
 #     ('UnarySYN', 'SYN*', 'SYN'),
-#     ('UnarySYN', 'SYN*', 'SYN*'),
+#     # ('UnarySYN', 'SYN*', 'SYN*'),
 #     ('UnarySYN', 'SYN*', 'UnaryPOS'),
 #     ('UnarySYN', 'SYN*', 'UnarySYN'),
 #     ('UnarySYN', 'UnaryPOS', 'POS'),
@@ -102,3 +106,4 @@ coarse_productions = [
 #     ('UnarySYN', 'UnarySYN', 'UnaryPOS'),
 #     ('UnarySYN', 'UnarySYN', 'UnarySYN')
 # ]
+
