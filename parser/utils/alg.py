@@ -99,6 +99,7 @@ def crf(scores, transitions, start_transitions, mask, target=None, marg=False, m
     # TODO target -> (B, seq_len, seq_len, 3)
     # (B, seq_len, seq_len)
     span_mask = target.ge(0) & mask
+    total = span_mask.sum()
     # (T, n_labels)
     scores = scores[span_mask] 
     # (T, 1)
