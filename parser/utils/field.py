@@ -289,8 +289,8 @@ class SubLabelField(ChartField):
         counter |= meta_labels
         self.vocab = Vocab(counter, min_freq, self.specials, self.unk_index, keep_sorted_label=True)
 
-        # self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN', 'UnaryPOS', 'UnarySYN']
         self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN']
+        # self.coarse_labels = ['POS*', 'POS', 'SYN*', 'SYN']
 
         # mask tensor
         # self.coarse_mask, self.unary_mask = self.get_coarse_mask(corpus)
@@ -316,8 +316,8 @@ class SubLabelField(ChartField):
             j = label_dict[p[2]]
             coarse_mask[i, j, k] = 0
 
-        # for l in ['POS*', 'POS', 'UnaryPOS']:
         for l in ['POS*', 'POS']:
+        # for l in ['POS*', 'POS']:
 
             unary_mask[label_dict[l]] = 0
 
