@@ -225,14 +225,15 @@ def inside_mask(scores, transitions, start_transitions, mask):
     return s
 
 
+@torch.enable_grad()
 def cky_mask(scores, transitions, start_transitions, mask):
     """[summary]
 
     Args:
-        scores ([type]): [description]
-        transitions ([type]): [n_labels]
-        start_transitions ([type]): [n_labels,n_labels,n_labels]
-        mask ([type]): [description]
+        scores (Tensor): [batch_size, seq_len, seq_len, n_labels]
+        transitions (Tensor): [n_labels,n_labels,n_labels]
+        start_transitions (Tensor): [n_labels]
+        mask (Tensor): [description]: [batch_size, seq_len, seq_len]
 
     Returns:
         [type]: [description]
@@ -240,26 +241,20 @@ def cky_mask(scores, transitions, start_transitions, mask):
     lens = mask[:, 0].sum(-1)
     batch_size, seq_len, seq_len, n_labels = scores.shape
     # [seq_len, seq_len, n_labels, batch_size]
-    scores = scores.permute(1, 2, 3, 0)
+    scores = scores.permute(1, 2, 3, 0).requires_grad_()
     # [seq_len, syyeq_len, n_labels, batch_size]
     mask = mask.permute(1, 2, 0)
     s = torch.zeros_like(scores)
-    # 3 for split point, child_left and child_right
-    bp = scores.new_zeros(seq_len, seq_len, n_labels, batch_size, 3).long()
 
     # (1, 1, n_labels)
     start_transitions = start_transitions.view(1, 1, n_labels)
 
     for w in range(1, seq_len):
         n = seq_len - w
-        # (1, n, 1)
-        starts = bp.new_tensor(range(n))[None, :, None]
         # (B, n, n_labels)
         emit_scores = scores.diagonal(w).permute(1, 2, 0)
         # (B, n, n_labels)
         diag_s = s.diagonal(w).permute(1, 2, 0)
-        # (B, n, n_labels, 3)
-        diag_bp = bp.diagonal(w).permute(1, 3, 0, 2)
         #
         if w == 1:
             # 考虑长度为1的span是否可以获得这些标签，如不应该是SYN/SYN*
@@ -278,26 +273,95 @@ def cky_mask(scores, transitions, start_transitions, mask):
         # [batch_size, n, w-1, n_labels, n_labels, n_labels] 
         s_span = s_span + transitions + emit_scores[..., None, None, None, :]
 
-        # [batch_size, n, n_labels], [batch_size, n, n_labels, 3]
-        s_span, idx = multi_dim_max(s_span, [2, 3, 4])
-        idx[..., 0] = idx[..., 0] + starts + 1
+        # [batch_size, n, n_labels]
+        s_span = torch.amax(s_span, (2, 3, 4))
         diag_s.copy_(s_span)
-        diag_bp.copy_(idx)
 
-    def backtrack(bp, label, i, j):
-        if j == i + 1:
-            return [(i, j, label)]
-        split, llabel, rlabel = bp[i][j][label]
-        ltree = backtrack(bp, llabel, i, split)
-        rtree = backtrack(bp, rlabel, split, j)
-        return [(i, j, label)] + ltree + rtree
-
-    labels = s.permute(3, 0, 1, 2).argmax(-1)
-    bp = bp.permute(3, 0, 1, 2, 4).tolist()
-    trees = [backtrack(bp[i], labels[i, 0, length], 0, length)
-             for i, length in enumerate(lens.tolist())]
+    # (L, L, B)
+    s, _ = s.max(-2)
+    # constant
+    logZ = s[0].gather(0, lens.unsqueeze(0)).sum()
+    # backpropagation
+    # [seq_len, seq_len, n_labels, batch_size]
+    gradients, = autograd.grad(logZ, scores)
+    #
+    trees = [sorted(i.nonzero().tolist(), key=lambda x: (x[0], -x[1])) for i in gradients.permute(3, 0, 1, 2)]
 
     return trees
+
+# def cky_mask(scores, transitions, start_transitions, mask):
+#     """[summary]
+
+#     Args:
+#         scores ([type]): [description]
+#         transitions ([type]): [n_labels]
+#         start_transitions ([type]): [n_labels,n_labels,n_labels]
+#         mask ([type]): [description]
+
+#     Returns:
+#         [type]: [description]
+#     """
+#     lens = mask[:, 0].sum(-1)
+#     batch_size, seq_len, seq_len, n_labels = scores.shape
+#     # [seq_len, seq_len, n_labels, batch_size]
+#     scores = scores.permute(1, 2, 3, 0)
+#     # [seq_len, syyeq_len, n_labels, batch_size]
+#     mask = mask.permute(1, 2, 0)
+#     s = torch.zeros_like(scores)
+#     # 3 for split point, child_left and child_right
+#     bp = scores.new_zeros(seq_len, seq_len, n_labels, batch_size, 3).long()
+
+#     # (1, 1, n_labels)
+#     start_transitions = start_transitions.view(1, 1, n_labels)
+
+#     for w in range(1, seq_len):
+#         n = seq_len - w
+#         # (1, n, 1)
+#         starts = bp.new_tensor(range(n))[None, :, None]
+#         # (B, n, n_labels)
+#         emit_scores = scores.diagonal(w).permute(1, 2, 0)
+#         # (B, n, n_labels)
+#         diag_s = s.diagonal(w).permute(1, 2, 0)
+#         # (B, n, n_labels, 3)
+#         diag_bp = bp.diagonal(w).permute(1, 3, 0, 2)
+#         #
+#         if w == 1:
+#             # 考虑长度为1的span是否可以获得这些标签，如不应该是SYN/SYN*
+#             # (n_labels, B, n)
+#             diag_s.copy_(emit_scores + start_transitions)
+#             continue
+
+#         # stripe: [n, w-1, n_labels, batch_size] 
+#         # [n, w-1, n_labels, 1, batch_size] 
+#         s_left = stripe(s, n, w-1, (0, 1)).unsqueeze(-2)
+#         # [n, w-1, 1, n_labels, batch_size] 
+#         s_right = stripe(s, n, w-1, (1, w), 0).unsqueeze(-3)
+#         # sum: [n, w-1, n_labels, n_labels, batch_size] 
+#         # [batch_size, n, w-1, n_labels, n_labels, 1] 
+#         s_span = (s_left + s_right).permute(4, 0, 1, 2, 3).unsqueeze(-1)
+#         # [batch_size, n, w-1, n_labels, n_labels, n_labels] 
+#         s_span = s_span + transitions + emit_scores[..., None, None, None, :]
+
+#         # [batch_size, n, n_labels], [batch_size, n, n_labels, 3]
+#         s_span, idx = multi_dim_max(s_span, [2, 3, 4])
+#         idx[..., 0] = idx[..., 0] + starts + 1
+#         diag_s.copy_(s_span)
+#         diag_bp.copy_(idx)
+
+#     def backtrack(bp, label, i, j):
+#         if j == i + 1:
+#             return [(i, j, label)]
+#         split, llabel, rlabel = bp[i][j][label]
+#         ltree = backtrack(bp, llabel, i, split)
+#         rtree = backtrack(bp, rlabel, split, j)
+#         return [(i, j, label)] + ltree + rtree
+
+#     labels = s.permute(3, 0, 1, 2).argmax(-1)
+#     bp = bp.permute(3, 0, 1, 2, 4).tolist()
+#     trees = [backtrack(bp[i], labels[i, 0, length], 0, length)
+#              for i, length in enumerate(lens.tolist())]
+
+#     return trees
 
 def cky_simple(scores, mask):
     """
