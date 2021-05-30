@@ -83,7 +83,7 @@ class Model(nn.Module):
         else:
             embed = self.embed_dropout(word_embed)[0]
 
-        x = pack_padded_sequence(embed, lens, True, False)
+        x = pack_padded_sequence(embed, lens.cpu(), True, False)
         x, _ = self.lstm(x)
         x, _ = pad_packed_sequence(x, True, total_length=seq_len)
         x = self.lstm_dropout(x)
