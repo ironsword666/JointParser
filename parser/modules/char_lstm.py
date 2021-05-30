@@ -37,7 +37,7 @@ class CHAR_LSTM(nn.Module):
         mask = x.ne(self.pad_index)
         lens = mask.sum(dim=1)
 
-        x = pack_padded_sequence(self.embed(x), lens, True, False)
+        x = pack_padded_sequence(self.embed(x), lens.cpu(), True, False)
         x, (hidden, _) = self.lstm(x)
         hidden = torch.cat(torch.unbind(hidden), dim=-1)
 
