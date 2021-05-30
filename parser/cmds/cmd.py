@@ -295,7 +295,9 @@ class CMD(object):
         span_mask = spans.ge(0) & mask
         span_loss, span_probs = crf(s_span, transitions, start_transitions, mask, spans, marg, mask_inside)
         label_loss = self.criterion(s_label[span_mask], labels[span_mask])
-        loss = span_loss + label_loss 
+        loss = self.args.alpha * span_loss + (1 - self.args.alpha) * label_loss 
+        # loss = span_loss + label_loss 
+
         # sublabel_loss
         # sublabel_loss = self.criterion(s_span[span_mask], spans[span_mask])
         # loss = span_loss + label_loss + sublabel_loss

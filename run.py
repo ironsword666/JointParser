@@ -46,8 +46,8 @@ if __name__ == '__main__':
                                 help='whether to mask wrong tree in inside')
         subparser.add_argument('--mask_cky', action='store_true',
                                 help='whether to mask wrong tree in cky')
-        subparser.add_argument('--alpha', default=4, type=int,
-                                help='coefficient to balance cws grain size')
+        subparser.add_argument('--alpha', default=0.5, type=float,
+                                help='coefficient to balance crf loss and label loss')
             
 
     args = parser.parse_args()
