@@ -48,6 +48,8 @@ if __name__ == '__main__':
                                 help='whether to mask wrong tree in cky')
         subparser.add_argument('--alpha', default=0.5, type=float,
                                 help='coefficient to balance crf loss and label loss')
+        subparser.add_argument('--proj_freq', default=100, type=int,
+                                help='frequency used to project labels')
             
 
     args = parser.parse_args()

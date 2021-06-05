@@ -93,7 +93,7 @@ class CMD(object):
                                    embed=embed,
                                    dict_file=args.dict_file)
             # 10 is for low frequency projection
-            self.CHART.build(train, 10)
+            self.CHART.build(train, args.proj_freq)
             # self.CHART.statistic()
             self.POS.build(train)
             torch.save(self.fields, args.fields)
