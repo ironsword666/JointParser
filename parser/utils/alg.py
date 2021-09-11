@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 
-from tkinter.messagebox import NO
 from parser.utils.fn import stripe, multi_dim_max
 
 import torch
