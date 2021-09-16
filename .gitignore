@@ -1,23 +1,21 @@
 # ignore data files
 data
-# ignore experiment model
-exp
-# ignore experiment log files
-log
-log*
-# ignore experiment output or results
-output
-results
-# ignore bash dir
-bash 
-
-
-# ignore bash scripts
-*.sh
 *.png
 *.pid
 *.pos
+
+# ignore experiment model
+exp
+*.pkl
+*.pt
+
+# ignore experiment log files
+log
 *.log
+
+# ignore experiment output or results
+output
+results
 
 # ignore intermediate files
 *.c
@@ -25,16 +23,10 @@ bash
 *.so
 build
 
-
 # ignore pycache
 __pycache__
 
 # ignore vscode
 .vscode
 
-# ignore saved model
-*.pkl
-*.pt
 
-# ignore EVALB
-EVALB
