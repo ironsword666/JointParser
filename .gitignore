@@ -25,8 +25,6 @@ bash
 *.so
 build
 
-# ignore hidden files
-.*
 
 # ignore pycache
 __pycache__
