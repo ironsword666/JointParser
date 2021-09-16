@@ -4,7 +4,7 @@ Source code for CoNLL-2021's paper [A Coarse-to-Fine Labeling Framework for Join
 
 The code of the joint framework is available at [`joint-parser`] branch, and the code of the pipeline framework is available at [`pipeline-cws`], [`pipeline-pos`], [`pipeline-parser`] for **Chinese Word Segmentation**, **POS Tagging**, and **Constituent Parsing** respectively.
 
-## Installation
+## Requirements
 
 As a prerequisite, the following requirements should be satisfied:
 
@@ -84,3 +84,6 @@ python -u run.py predict \
 
 - `fpred`： path to predicted results.
 
+## Download models
+
+The model of the joint framework is available at [`joint-parser`](), and the model of the pipeline framework is available at [`pipeline`]().
