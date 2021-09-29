@@ -2,7 +2,7 @@
 
 Source code for CoNLL-2021's paper [A Coarse-to-Fine Labeling Framework for Joint Word Segmentation, POS Tagging, and Constituent Parsing]().
 
-The code of the joint framework is available at [`joint-parser`] branch, and the code of the pipeline framework is available at [`pipeline-cws`], [`pipeline-pos`], [`pipeline-parser`] for **Chinese Word Segmentation**, **POS Tagging**, and **Constituent Parsing** respectively.
+The code of the joint framework is available at [`joint-parser`](https://github.com/ironsword666/JointParser/tree/joint-parser) branch, and the code of the pipeline framework is available at [`pipeline-cws`](https://github.com/ironsword666/JointParser/tree/pipeline-cws), [`pipeline-pos`](https://github.com/ironsword666/JointParser/tree/pipeline-pos), [`pipeline-parser`](https://github.com/ironsword666/JointParser/tree/pipeline-parser) for **Chinese Word Segmentation**, **POS Tagging**, and **Constituent Parsing** respectively.
 
 ## Requirements
 
@@ -86,4 +86,4 @@ python -u run.py predict \
 
 ## Download models
 
-The model of the joint framework is available at [`joint-parser`](), and the model of the pipeline framework is available at [`pipeline`]().
+The model of the joint framework is available at [`joint-ctb51`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/joint-ctb51.tar.gz), [`joint-ctb51-big`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/joint-ctb51-big.tar.gz), [`joint-ctb7`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/joint-ctb7.tar.gz) and the model of the pipeline framework is available at [`pipeline-ctb51`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/pipeline-ctb51.tar.gz), [`pipeline-ctb51-big`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/pipeline-ctb51-big.tar.gz), [`pipeline-ctb7`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/pipeline-ctb7.tar.gz).
