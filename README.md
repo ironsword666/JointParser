@@ -8,7 +8,7 @@ The code of the joint framework is available at [`joint-parser`](https://github.
 
 As a prerequisite, the following requirements should be satisfied:
 
-- **python >= 3.6** to support `f'str'` 
+- **python >= 3.7** to support `f'str'` 
 
 - **NLTK == 3.5** to build constituent trees
 
