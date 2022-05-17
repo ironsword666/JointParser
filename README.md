@@ -75,7 +75,7 @@ python -u run.py predict \
 - `marg`：consistent with the training phase.
 - `mask_inside`：consistent with the training phase.
 - `mask_cky`：whether exclude illegal trees in CKY algorithm.，used by default in testing phase and not used in training phase.
-- `file`: ddirectory to save model and fields (constructed from train data), named `model` and `fields` respectively.
+- `file`: directory to save model and fields (constructed from train data), named `model` and `fields` respectively.
 - `fdata`： data to be predicted, must in pid format:
 
 ```
@@ -86,4 +86,14 @@ python -u run.py predict \
 
 ## Download models
 
-The model of the joint framework is available at [`joint-ctb51`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/joint-ctb51.tar.gz), [`joint-ctb51-big`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/joint-ctb51-big.tar.gz), [`joint-ctb7`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/joint-ctb7.tar.gz) and the model of the pipeline framework is available at [`pipeline-ctb51`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/pipeline-ctb51.tar.gz), [`pipeline-ctb51-big`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/pipeline-ctb51-big.tar.gz), [`pipeline-ctb7`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/pipeline-ctb7.tar.gz).
+The models of the joint framework are available at [`joint-ctb51`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/joint-ctb51.tar.gz), [`joint-ctb51-big`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/joint-ctb51-big.tar.gz), [`joint-ctb7`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/joint-ctb7.tar.gz) and the models of the pipeline framework are available at [`pipeline-ctb51`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/pipeline-ctb51.tar.gz), [`pipeline-ctb51-big`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/pipeline-ctb51-big.tar.gz), [`pipeline-ctb7`](http://hlt.suda.edu.cn/LA/yhou/CoNLL/pipeline-ctb7.tar.gz).
+
+**Note**: Sometimes, the above links may not work, please download the models via Baidu NetDisk or Google Drive as described below.
+
+**Baidu NetDisk**
+
+For Baidu NetDisk (百度网盘) users, please use the following link to download the models: [`all models`](https://pan.baidu.com/s/1zbd2BFVMeCCp0Qaw8NNENQ), the password (提取码) is `wf79`.
+
+**Google Drive**
+
+For Google Drive users, please use the following link to download the models: [`all models`](https://drive.google.com/drive/folders/1QcBVBYguIcAU1fpOY0ogvlrn-kn9FxY_?usp=sharing).
